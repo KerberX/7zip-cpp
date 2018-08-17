@@ -1,5 +1,5 @@
 # 7zip-cpp
-Fork of SevenZip++ for VS2015, VS2017 (https://github.com/getnamo/7zip-cpp)
+Fork of SevenZip++ for VS2017 (https://github.com/getnamo/7zip-cpp)
 
 Implement compress file list paradigm
 
@@ -123,16 +123,7 @@ In order to compile the tests, the following requirements must be available:
 The solution assumes 7zip is installed in ```C:\Program Files\7-Zip\7z.dll```.
 
 ## Known Issues
-
 There is a bug in the testing program.  The issue has been logged on @keithjjones repository.
 
 ## Contributing
-
 Read Contributing.md
-
-### Branches
-
-- Devel branch is the bleeding edge, but it should still work.
-- Devel-XXX branches are current topics.
-- Master branch is the latest stable version.
-- More branch information is in Contributing.md.
