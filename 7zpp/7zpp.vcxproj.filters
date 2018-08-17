@@ -1,0 +1,167 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="SevenZipException.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="SevenZipLibrary.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="SevenZipArchive.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="ArchiveExtractCallback.cpp">
+      <Filter>Source files\Callbacks</Filter>
+    </ClCompile>
+    <ClCompile Include="ArchiveOpenCallback.cpp">
+      <Filter>Source files\Callbacks</Filter>
+    </ClCompile>
+    <ClCompile Include="ArchiveUpdateCallback.cpp">
+      <Filter>Source files\Callbacks</Filter>
+    </ClCompile>
+    <ClCompile Include="CompressionFormat.cpp">
+      <Filter>Header files\Enums</Filter>
+    </ClCompile>
+    <ClCompile Include="Utility.cpp">
+      <Filter>Source files\Utility</Filter>
+    </ClCompile>
+    <ClCompile Include="FileSys.cpp">
+      <Filter>Source files\Utility</Filter>
+    </ClCompile>
+    <ClCompile Include="InStreamWrapper.cpp">
+      <Filter>Source files\Streams</Filter>
+    </ClCompile>
+    <ClCompile Include="OutStreamWrapper.cpp">
+      <Filter>Source files\Streams</Filter>
+    </ClCompile>
+    <ClCompile Include="PropVariant.cpp">
+      <Filter>Source files\Misc</Filter>
+    </ClCompile>
+    <ClCompile Include="GUIDs.cpp">
+      <Filter>Source files\Misc</Filter>
+    </ClCompile>
+    <ClCompile Include="PathScanner.cpp">
+      <Filter>Source files\Utility</Filter>
+    </ClCompile>
+    <ClCompile Include="stdafx.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="SevenZipException.h">
+      <Filter>Source files</Filter>
+    </ClInclude>
+    <ClInclude Include="SevenZipLibrary.h">
+      <Filter>Source files</Filter>
+    </ClInclude>
+    <ClInclude Include="SevenZipArchive.h">
+      <Filter>Source files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Include\7zpp\7zpp.h">
+      <Filter>Includes</Filter>
+    </ClInclude>
+    <ClInclude Include="7zpp.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
+    <ClInclude Include="ArchiveExtractCallback.h">
+      <Filter>Header files\Callbacks</Filter>
+    </ClInclude>
+    <ClInclude Include="ArchiveOpenCallback.h">
+      <Filter>Header files\Callbacks</Filter>
+    </ClInclude>
+    <ClInclude Include="ArchiveUpdateCallback.h">
+      <Filter>Header files\Callbacks</Filter>
+    </ClInclude>
+    <ClInclude Include="Enum.h">
+      <Filter>Source files\Enums</Filter>
+    </ClInclude>
+    <ClInclude Include="CompressionLevel.h">
+      <Filter>Source files\Enums</Filter>
+    </ClInclude>
+    <ClInclude Include="CompressionFormat.h">
+      <Filter>Source files\Enums</Filter>
+    </ClInclude>
+    <ClInclude Include="Utility.h">
+      <Filter>Header files\Utility</Filter>
+    </ClInclude>
+    <ClInclude Include="FileSys.h">
+      <Filter>Header files\Utility</Filter>
+    </ClInclude>
+    <ClInclude Include="FileInfo.h">
+      <Filter>Header files\Utility</Filter>
+    </ClInclude>
+    <ClInclude Include="InStreamWrapper.h">
+      <Filter>Header files\Streams</Filter>
+    </ClInclude>
+    <ClInclude Include="OutStreamWrapper.h">
+      <Filter>Header files\Streams</Filter>
+    </ClInclude>
+    <ClInclude Include="GUIDs.h">
+      <Filter>Header files\Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="targetver.h">
+      <Filter>Header files\Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="PropVariant.h">
+      <Filter>Header files\Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="ListingNotifier.h">
+      <Filter>Header files\Notifiers</Filter>
+    </ClInclude>
+    <ClInclude Include="ProgressNotifier.h">
+      <Filter>Header files\Notifiers</Filter>
+    </ClInclude>
+    <ClInclude Include="SevenString.h">
+      <Filter>Header files\Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="PathScanner.h">
+      <Filter>Header files\Utility</Filter>
+    </ClInclude>
+    <ClInclude Include="stdafx.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Includes">
+      <UniqueIdentifier>{e0b5aed5-a319-46fc-9325-1d12a75c220a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header files">
+      <UniqueIdentifier>{64b995d3-48a1-43c6-bb30-59b361e4a104}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source files">
+      <UniqueIdentifier>{a95ea252-a1de-4a69-8282-535be5202310}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header files\Callbacks">
+      <UniqueIdentifier>{4ff54e0c-c235-473f-8d7f-268e02ec861a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source files\Callbacks">
+      <UniqueIdentifier>{b9566556-712e-42ca-bea4-d3796b061ce6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header files\Enums">
+      <UniqueIdentifier>{5667a8d7-1647-4890-8a47-0fe326c1ebc6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source files\Enums">
+      <UniqueIdentifier>{9d09e086-a180-47ee-a7c9-5e6bb6740853}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header files\Utility">
+      <UniqueIdentifier>{46e39498-50ae-430f-91e6-b8a12bff7b08}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source files\Utility">
+      <UniqueIdentifier>{f459e443-e6a9-4f18-89f7-191230e07145}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header files\Streams">
+      <UniqueIdentifier>{859f0be3-3cf3-49d5-9ca7-ee760bfbcfb5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source files\Streams">
+      <UniqueIdentifier>{c5187d78-d6ca-4ec4-9673-1588a51fb9fa}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header files\Misc">
+      <UniqueIdentifier>{1a18f014-c660-4482-ac7c-ac18ffec4345}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source files\Misc">
+      <UniqueIdentifier>{63869579-7f2e-4c70-a77d-18958346a0cb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header files\Notifiers">
+      <UniqueIdentifier>{a0c8b974-0bc4-4679-9955-28c88cb071b1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source files\Notifiers">
+      <UniqueIdentifier>{df967fee-b360-4bee-994b-7ea1fedea0f4}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>
