@@ -74,10 +74,12 @@ namespace SevenZip
 				CComPtr<ArchiveExtractCallback> extractCallback = new ArchiveExtractCallback(archive, destDirectory, notifier);
 				extractCallback->SetFinalPath(finalPaths);
 
-				const UInt32* indiencesData = filesIndices ? filesIndices->data() : NULL;
-				UInt32 indiencesCount = filesIndices ? (UInt32)filesIndices->size() : -1;
+				const uint32_t* indiencesData = filesIndices ? filesIndices->data() : NULL;
+				uint32_t indiencesCount = filesIndices ? (uint32_t)filesIndices->size() : -1;
 				hr = archive->Extract(indiencesData, indiencesCount, false, extractCallback);
-				if (hr == S_OK) // returning S_FALSE also indicates error
+				
+				// Returning S_FALSE also indicates error
+				if (hr == S_OK)
 				{
 					archive->Close();
 					if (notifier)
@@ -178,14 +180,16 @@ namespace SevenZip
 	{
 		if (!FileSys::DirectoryExists(directory))
 		{
-			return false;	//Directory does not exist
+			//Directory does not exist
+			return false;
 		}
 		if (FileSys::IsDirectoryEmptyRecursive(directory))
 		{
-			return false;	//Directory \"%s\" is empty" ), directory.c_str()
+			//Directory \"%s\" is empty" ), directory.c_str()
+			return false;
 		}
 
-		FilePathInfoVector files = FileSys::GetFilesInDirectory(directory, searchPattern, recursion);
+		FilePathInfoVector files = FileSys::GetFilesInDirectory(directory, searchPattern.empty() ? AllFilesPattern : searchPattern, recursion);
 
 		TStringVector relativePaths(files.size(), TString());
 		for (size_t i = 0; i < files.size(); i++)
@@ -402,17 +406,13 @@ namespace SevenZip
 	}
 
 	/* Compression */
-	bool SevenZipArchive::CompressDirectory(const TString& directory, bool bRecursive, ProgressNotifier* notifier)
+	bool SevenZipArchive::CompressDirectory(const TString& directory, bool isRecursive, ProgressNotifier* notifier)
 	{
-		return FindAndCompressFiles(directory, AllFilesPattern, FileSys::GetPath(directory), bRecursive, notifier);
+		return FindAndCompressFiles(directory, AllFilesPattern, FileSys::GetPath(directory), isRecursive, notifier);
 	}
-	bool SevenZipArchive::CompressFiles(const TString& directory, const TString& searchFilter, bool bRecursive, ProgressNotifier* notifier)
+	bool SevenZipArchive::CompressFiles(const TString& directory, const TString& searchFilter, bool isRecursive, ProgressNotifier* notifier)
 	{
-		return FindAndCompressFiles(directory, searchFilter, directory, bRecursive, notifier);
-	}
-	bool SevenZipArchive::CompressAllFiles(const TString& directory, bool bRecursive, ProgressNotifier* notifier)
-	{
-		return FindAndCompressFiles(directory, AllFilesPattern, directory, bRecursive, notifier);
+		return FindAndCompressFiles(directory, searchFilter, directory, isRecursive, notifier);
 	}
 	bool SevenZipArchive::CompressSpecifiedFiles(const TStringVector& sourceFiles, const TStringVector& archivePaths, ProgressNotifier* notifier)
 	{
