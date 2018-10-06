@@ -194,7 +194,7 @@ namespace SevenZip
 			if (notifier)
 			{
 				notifier->OnMajorProgress(itemnames[i], i);
-				if (notifier->Stop())
+				if (notifier->ShouldStop())
 				{
 					return false;
 				}
@@ -251,7 +251,7 @@ namespace SevenZip
 			{
 				TString message = _T("Detecting format. Trying ") + availableFormats[i].GetString();
 				notifier->OnMajorProgress(message, i);
-				if (notifier->Stop())
+				if (notifier->ShouldStop())
 				{
 					return false;
 				}
@@ -274,7 +274,7 @@ namespace SevenZip
 		// There is a problem that GZip files will not be detected using the above method. This is a fix.
 		if (true)
 		{
-			if (notifier && notifier->Stop())
+			if (notifier && notifier->ShouldStop())
 			{
 				return false;
 			}

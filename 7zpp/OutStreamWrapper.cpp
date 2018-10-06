@@ -63,7 +63,7 @@ namespace SevenZip
 			if (m_ProgressNotifier)
 			{
 				m_ProgressNotifier->OnMinorProgress(m_FilePath, m_CurrentPos, m_StreamSize);
-				if (m_ProgressNotifier->Stop())
+				if (m_ProgressNotifier->ShouldStop())
 				{
 					return HRESULT_FROM_WIN32(ERROR_CANCELLED);
 				}
@@ -105,7 +105,7 @@ namespace SevenZip
 			if (m_ProgressNotifier)
 			{
 				m_ProgressNotifier->OnMinorProgress(m_FilePath, m_CurrentPos, m_StreamSize);
-				if (m_ProgressNotifier->Stop())
+				if (m_ProgressNotifier->ShouldStop())
 				{
 					return HRESULT_FROM_WIN32(ERROR_CANCELLED);
 				}

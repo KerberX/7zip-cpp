@@ -78,7 +78,7 @@ namespace SevenZip
 			if (m_ProgressNotifier)
 			{
 				m_ProgressNotifier->OnMajorProgress(_T(""), *completeValue);
-				if (m_ProgressNotifier->Stop())
+				if (m_ProgressNotifier->ShouldStop())
 				{
 					return HRESULT_FROM_WIN32(ERROR_CANCELLED);
 				}
@@ -108,7 +108,7 @@ namespace SevenZip
 			if (m_ProgressNotifier && index < m_FilePaths.size())
 			{
 				m_ProgressNotifier->OnMinorProgress(m_FilePaths[index].FilePath, 0, 0);
-				if (m_ProgressNotifier->Stop())
+				if (m_ProgressNotifier->ShouldStop())
 				{
 					return HRESULT_FROM_WIN32(ERROR_CANCELLED);
 				}

@@ -182,7 +182,7 @@ namespace SevenZip
 				if (m_Notifier)
 				{
 					m_Notifier->OnMinorProgress(m_RelativePath, 0, 0);
-					if (m_Notifier->Stop())
+					if (m_Notifier->ShouldStop())
 					{
 						return HRESULT_FROM_WIN32(ERROR_CANCELLED);
 					}
@@ -310,7 +310,7 @@ namespace SevenZip
 				if (m_Notifier)
 				{
 					m_Notifier->OnMajorProgress(m_RelativePath, m_BytesCompleted);
-					if (m_Notifier->Stop())
+					if (m_Notifier->ShouldStop())
 					{
 						return HRESULT_FROM_WIN32(ERROR_CANCELLED);
 					}

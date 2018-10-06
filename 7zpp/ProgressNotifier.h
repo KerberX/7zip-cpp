@@ -8,7 +8,7 @@ namespace SevenZip
 	{
 		public:
 			// Called whenever operation can be stopped. Return true to abort operation.
-			virtual bool Stop()
+			virtual bool ShouldStop()
 			{
 				return false;
 			}

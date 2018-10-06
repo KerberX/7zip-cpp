@@ -68,7 +68,7 @@ namespace SevenZip
 			if (m_Notifier)
 			{
 				m_Notifier->OnMinorProgress(_T(""), bytes ? *bytes : 0, m_Total);
-				if (m_Notifier->Stop())
+				if (m_Notifier->ShouldStop())
 				{
 					return HRESULT_FROM_WIN32(ERROR_CANCELLED);
 				}
