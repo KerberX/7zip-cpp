@@ -16,6 +16,8 @@ namespace SevenZip
 
 	enum CompressionMethod
 	{
+		Unknown = -1,
+
 		LZMA,
 		LZMA2,
 		PPMD,
@@ -40,7 +42,7 @@ namespace SevenZip
 			std::vector<size_t> m_ItemOriginalSizes;
 
 			// Properties
-			CompressionFormatEnum m_Property_CompressionFormat;
+			CompressionFormatEnum m_Property_CompressionFormat = CompressionFormatEnum::Enum::Unknown;
 			int m_Property_CompressionLevel = 5;
 			int m_Property_DictionarySize = 5;
 			CompressionMethod m_Property_CompressionMethod = CompressionMethod::LZMA;
@@ -151,8 +153,7 @@ namespace SevenZip
 
 			// Excludes the last directory as the root in the archive, its contents are at root instead. E.g.
 			// specifying "C:\Temp\MyFolder" make the files in "MyFolder" the root items in the archive.
-			virtual bool CompressFiles(const TString& directory, const TString& searchFilter, bool bRecursive = true, ProgressNotifier* notifier = NULL);
-			virtual bool CompressAllFiles(const TString& directory, bool bRecursive = true, ProgressNotifier* notifier = NULL);
+			virtual bool CompressFiles(const TString& directory, const TString& searchFilter = TString(), bool bRecursive = true, ProgressNotifier* notifier = NULL);
 			virtual bool CompressSpecifiedFiles(const TStringVector& sourceFiles, const TStringVector& archivePaths, ProgressNotifier* notifier = NULL);
 
 			// Compress just this single file as the root item in the archive.
