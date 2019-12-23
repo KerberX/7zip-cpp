@@ -8,30 +8,27 @@ namespace SevenZip
 {
 	class ProgressNotifier;
 
-	namespace intl
+	class ArchiveOpenCallback: public IArchiveOpenCallback, public ICryptoGetTextPassword
 	{
-		class ArchiveOpenCallback: public IArchiveOpenCallback, public ICryptoGetTextPassword
-		{
-			private:
-				long m_RefCount = 0;
-				ProgressNotifier* m_Notifier = NULL;
-				int64_t m_Total = 0;
+		private:
+			long m_RefCount = 0;
+			ProgressNotifier* m_Notifier = nullptr;
+			int64_t m_Total = 0;
 
-			public:
-				ArchiveOpenCallback(ProgressNotifier* notifier = NULL);
-				virtual ~ArchiveOpenCallback();
+		public:
+			ArchiveOpenCallback(ProgressNotifier* notifier = nullptr);
+			virtual ~ArchiveOpenCallback();
 
-			public:
-				STDMETHOD(QueryInterface)(REFIID iid, void** ppvObject);
-				STDMETHOD_(ULONG, AddRef)();
-				STDMETHOD_(ULONG, Release)();
+		public:
+			STDMETHOD(QueryInterface)(REFIID iid, void** ppvObject);
+			STDMETHOD_(ULONG, AddRef)();
+			STDMETHOD_(ULONG, Release)();
 
-				// IArchiveOpenCallback
-				STDMETHOD(SetTotal)(const UInt64* files, const UInt64* bytes);
-				STDMETHOD(SetCompleted)(const UInt64* files, const UInt64* bytes);
+			// IArchiveOpenCallback
+			STDMETHOD(SetTotal)(const UInt64* files, const UInt64* bytes);
+			STDMETHOD(SetCompleted)(const UInt64* files, const UInt64* bytes);
 
-				// ICryptoGetTextPassword
-				STDMETHOD(CryptoGetTextPassword)(BSTR* password);
-		};
-	}
+			// ICryptoGetTextPassword
+			STDMETHOD(CryptoGetTextPassword)(BSTR* password);
+	};
 }

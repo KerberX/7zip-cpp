@@ -19,13 +19,7 @@
     <ClCompile Include="ArchiveUpdateCallback.cpp">
       <Filter>Source files\Callbacks</Filter>
     </ClCompile>
-    <ClCompile Include="CompressionFormat.cpp">
-      <Filter>Header files\Enums</Filter>
-    </ClCompile>
     <ClCompile Include="Utility.cpp">
-      <Filter>Source files\Utility</Filter>
-    </ClCompile>
-    <ClCompile Include="FileSys.cpp">
       <Filter>Source files\Utility</Filter>
     </ClCompile>
     <ClCompile Include="InStreamWrapper.cpp">
@@ -34,9 +28,6 @@
     <ClCompile Include="OutStreamWrapper.cpp">
       <Filter>Source files\Streams</Filter>
     </ClCompile>
-    <ClCompile Include="PropVariant.cpp">
-      <Filter>Source files\Misc</Filter>
-    </ClCompile>
     <ClCompile Include="GUIDs.cpp">
       <Filter>Source files\Misc</Filter>
     </ClCompile>
@@ -44,17 +35,17 @@
       <Filter>Source files\Utility</Filter>
     </ClCompile>
     <ClCompile Include="stdafx.cpp" />
+    <ClCompile Include="VariantProperty.cpp">
+      <Filter>Source files\Misc</Filter>
+    </ClCompile>
+    <ClCompile Include="CompressionFormat.cpp">
+      <Filter>Source files\Enums</Filter>
+    </ClCompile>
+    <ClCompile Include="FileSystem.cpp">
+      <Filter>Source files\Utility</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="SevenZipException.h">
-      <Filter>Source files</Filter>
-    </ClInclude>
-    <ClInclude Include="SevenZipLibrary.h">
-      <Filter>Source files</Filter>
-    </ClInclude>
-    <ClInclude Include="SevenZipArchive.h">
-      <Filter>Source files</Filter>
-    </ClInclude>
     <ClInclude Include="..\Include\7zpp\7zpp.h">
       <Filter>Includes</Filter>
     </ClInclude>
@@ -70,19 +61,7 @@
     <ClInclude Include="ArchiveUpdateCallback.h">
       <Filter>Header files\Callbacks</Filter>
     </ClInclude>
-    <ClInclude Include="Enum.h">
-      <Filter>Source files\Enums</Filter>
-    </ClInclude>
-    <ClInclude Include="CompressionLevel.h">
-      <Filter>Source files\Enums</Filter>
-    </ClInclude>
-    <ClInclude Include="CompressionFormat.h">
-      <Filter>Source files\Enums</Filter>
-    </ClInclude>
     <ClInclude Include="Utility.h">
-      <Filter>Header files\Utility</Filter>
-    </ClInclude>
-    <ClInclude Include="FileSys.h">
       <Filter>Header files\Utility</Filter>
     </ClInclude>
     <ClInclude Include="FileInfo.h">
@@ -100,9 +79,6 @@
     <ClInclude Include="targetver.h">
       <Filter>Header files\Misc</Filter>
     </ClInclude>
-    <ClInclude Include="PropVariant.h">
-      <Filter>Header files\Misc</Filter>
-    </ClInclude>
     <ClInclude Include="ListingNotifier.h">
       <Filter>Header files\Notifiers</Filter>
     </ClInclude>
@@ -115,7 +91,36 @@
     <ClInclude Include="PathScanner.h">
       <Filter>Header files\Utility</Filter>
     </ClInclude>
-    <ClInclude Include="stdafx.h" />
+    <ClInclude Include="VariantProperty.h">
+      <Filter>Header files\Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="CompressionFormat.h">
+      <Filter>Header files\Enums</Filter>
+    </ClInclude>
+    <ClInclude Include="CompressionLevel.h">
+      <Filter>Header files\Enums</Filter>
+    </ClInclude>
+    <ClInclude Include="Enum.h">
+      <Filter>Header files\Enums</Filter>
+    </ClInclude>
+    <ClInclude Include="SevenZipArchive.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
+    <ClInclude Include="SevenZipException.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
+    <ClInclude Include="SevenZipLibrary.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
+    <ClInclude Include="stdafx.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
+    <ClInclude Include="Common.h">
+      <Filter>Header files\Utility</Filter>
+    </ClInclude>
+    <ClInclude Include="FileSystem.h">
+      <Filter>Header files\Utility</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Includes">

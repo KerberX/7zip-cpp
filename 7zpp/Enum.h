@@ -26,7 +26,7 @@
 //{
 //	{ MyType::Foo, _T( "Foo" ) },
 //	{ MyType::Bar, _T( "Bar" ) },
-//	{ MyType::Unknown, NULL }
+//	{ MyType::Unknown, nullptr }
 //};
 //
 //
@@ -51,7 +51,7 @@
 
 namespace SevenZip
 {
-	namespace intl
+	namespace Internal
 	{
 		template <typename TEnum, class DerivedDef>
 		class EnumerationDefinition
@@ -67,7 +67,7 @@ namespace SevenZip
 				static TEnum Parse(const TString& string, const TEnum defaultValue)
 				{
 					const StringValue* it = DerivedDef::Strings;
-					for (; it->string != NULL; ++it)
+					for (; it->string != nullptr; ++it)
 					{
 						if (string.Compare(it->string) == 0)
 						{
@@ -79,7 +79,7 @@ namespace SevenZip
 				static TString Format(const TEnum& value)
 				{
 					const StringValue* it = DerivedDef::Strings;
-					for (; it->string != NULL; ++it)
+					for (; it->string != nullptr; ++it)
 					{
 						if (value == it->value)
 						{

@@ -3,50 +3,26 @@
 
 namespace SevenZip
 {
-	TString StrFmt(const TCHAR* format, ...)
+	TString Exception::FormatString(const TCHAR* format, ...)
 	{
-		TString result;
-		TCHAR*	buffer;
-		int		sz;
 		va_list	args;
-
 		va_start(args, format);
 
-		sz = _vsctprintf(format, args) + 1;
-		buffer = new TCHAR[sz];
-		_vsntprintf_s(buffer, sz, _TRUNCATE, format, args);
-		result = buffer;
-		delete[] buffer;
-
+		const int count = _vsctprintf(format, args) + 1;
+		TString result(count, _T('\0'));
+		_vsntprintf_s(result.data(), result.size(), _TRUNCATE, format, args);
 		va_end(args);
 
 		return result;
 	}
-	TString GetWinErrMsg(const TString& contextMessage, DWORD lastError)
+	TString Exception::GetWinErrMsg(const TString& contextMessage, DWORD lastError)
 	{
 		// TODO: use FormatMessage to get the appropriate message from the 
-		return StrFmt(_T("%s: GetLastError = %lu"), contextMessage.c_str(), lastError);
+		return FormatString(_T("%s: GetLastError = %lu"), contextMessage.c_str(), lastError);
 	}
-	TString GetCOMErrMsg(const TString& contextMessage, HRESULT lastError)
+	TString Exception::GetCOMErrMsg(const TString& contextMessage, HRESULT lastError)
 	{
 		// TODO: use FormatMessage to get the appropriate message from the 
-		return StrFmt(_T("%s: HRESULT = 0x%08X"), contextMessage.c_str(), lastError);
+		return FormatString(_T("%s: HRESULT = 0x%08X"), contextMessage.c_str(), lastError);
 	}
-
-	SevenZipException::SevenZipException()
-	{
-	}
-	SevenZipException::SevenZipException(const TString& message)
-		: m_Message(message)
-	{
-	}
-	SevenZipException::~SevenZipException()
-	{
-	}
-
-	const TString& SevenZipException::GetMessage() const
-	{
-		return m_Message;
-	}
-
 }

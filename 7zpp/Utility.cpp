@@ -1,108 +1,108 @@
 #include "stdafx.h"
 #include "Utility.h"
-#include "PropVariant.h"
+#include "VariantProperty.h"
 #include "ProgressNotifier.h"
+#include "Common.h"
 #include "Enum.h"
 
-namespace SevenZip
+namespace SevenZip::Utility
 {
-	using namespace intl;
-
-	TString& Utility::ToLower(TString& string)
+	TString& MakeLower(TString& string)
 	{
 		::CharLowerBuff(string.data(), (DWORD)string.length());
 		return string;
 	}
-	TString& Utility::ToUpper(TString& string)
+	TString& MakeUpper(TString& string)
 	{
 		::CharUpperBuff(string.data(), (DWORD)string.length());
 		return string;
 	}
 	
-	const GUID* Utility::GetCompressionGUID(const CompressionFormatEnum& format)
+	std::optional<GUID> GetCompressionGUID(const CompressionFormatEnum& format)
 	{
 		switch (format)
 		{
+			case CompressionFormat::SevenZip:
+			{
+				return CLSID_CFormat7z;
+			}
 			case CompressionFormat::Zip:
 			{
-				return &SevenZip::intl::CLSID_CFormatZip;
+				return CLSID_CFormatZip;
 			}
 			case CompressionFormat::GZip:
 			{
-				return &SevenZip::intl::CLSID_CFormatGZip;
+				return CLSID_CFormatGZip;
 			}
 			case CompressionFormat::BZip2:
 			{
-				return &SevenZip::intl::CLSID_CFormatBZip2;
+				return CLSID_CFormatBZip2;
 			}
 			case CompressionFormat::Rar:
 			{
-				return &SevenZip::intl::CLSID_CFormatRar;
+				return CLSID_CFormatRar;
 			}
 			case CompressionFormat::Rar5:
 			{
-				return &SevenZip::intl::CLSID_CFormatRar5;
+				return CLSID_CFormatRar5;
 			}
 			case CompressionFormat::Tar:
 			{
-				return &SevenZip::intl::CLSID_CFormatTar;
+				return CLSID_CFormatTar;
 			}
 			case CompressionFormat::Iso:
 			{
-				return &SevenZip::intl::CLSID_CFormatIso;
+				return CLSID_CFormatIso;
 			}
 			case CompressionFormat::Cab:
 			{
-				return &SevenZip::intl::CLSID_CFormatCab;
+				return CLSID_CFormatCab;
 			}
 			case CompressionFormat::Lzma:
 			{
-				return &SevenZip::intl::CLSID_CFormatLzma;
+				return CLSID_CFormatLzma;
 			}
 			case CompressionFormat::Lzma86:
 			{
-				return &SevenZip::intl::CLSID_CFormatLzma86;
+				return CLSID_CFormatLzma86;
 			}
 		}
-		return &SevenZip::intl::CLSID_CFormat7z;
+		return CLSID_CFormat7z;
 	}
 	
-	CComPtr<IInArchive> Utility::GetArchiveReader(const SevenZipLibrary& library, const CompressionFormatEnum& format)
+	CComPtr<IInArchive> GetArchiveReader(const Library& library, const CompressionFormatEnum& format)
 	{
-		const GUID* guid = GetCompressionGUID(format);
-
-		CComPtr<IInArchive> archive;
-		library.CreateObject(*guid, IID_IInArchive, reinterpret_cast<void**>(&archive));
-		return archive;
+		if (auto guid = GetCompressionGUID(format))
+		{
+			return library.CreateObject<IInArchive>(*guid, IID_IInArchive);
+		}
+		return nullptr;
 	}
-	CComPtr<IOutArchive> Utility::GetArchiveWriter(const SevenZipLibrary& library, const CompressionFormatEnum& format)
+	CComPtr<IOutArchive> GetArchiveWriter(const Library& library, const CompressionFormatEnum& format)
 	{
-		const GUID* guid = GetCompressionGUID(format);
-
-		CComPtr<IOutArchive> archive;
-		library.CreateObject(*guid, IID_IOutArchive, reinterpret_cast<void**>(&archive));
-		return archive;
+		if (auto guid = GetCompressionGUID(format))
+		{
+			return library.CreateObject<IOutArchive>(*guid, IID_IOutArchive);
+		}
+		return nullptr;
 	}
 	
-	bool Utility::GetNumberOfItems(const SevenZipLibrary& library, const TString& archivePath, CompressionFormatEnum& format, size_t& itemCount, ProgressNotifier* notifier)
+	bool GetNumberOfItems(const Library& library, const TString& archivePath, CompressionFormatEnum& format, size_t& itemCount, ProgressNotifier* notifier)
 	{
-		CComPtr<IStream> fileStream = FileSys::OpenFileToRead(archivePath);
-
-		if (fileStream == NULL)
+		auto fileStream = FileSystem::OpenFileToRead(archivePath);
+		if (!fileStream)
 		{
 			return false;
-			//throw SevenZipException( StrFmt( _T( "Could not open archive \"%s\"" ), m_archivePath.c_str() ) );
 		}
 
-		CComPtr<IInArchive> archive = Utility::GetArchiveReader(library, format);
-		CComPtr<InStreamWrapper> inFile = new InStreamWrapper(fileStream);
-		CComPtr<ArchiveOpenCallback> openCallback = new ArchiveOpenCallback(notifier);
+		auto archive = Utility::GetArchiveReader(library, format);
+		auto inFile = CreateObject<InStreamWrapper>(fileStream, notifier);
+		auto openCallback = CreateObject<ArchiveOpenCallback>(notifier);
 
-		HRESULT hr = archive->Open(inFile, 0, openCallback);
+		HRESULT hr = archive->Open(inFile, nullptr, openCallback);
 		if (hr != S_OK)
 		{
 			return false;
-			//throw SevenZipException( GetCOMErrMsg( _T( "Open archive" ), hr ) );
 		}
 		
 		if (notifier)
@@ -115,32 +115,28 @@ namespace SevenZip
 		if (hr != S_OK)
 		{
 			return false;
-			//throw SevenZipException( GetCOMErrMsg( _T( "Open archive" ), hr ) );
 		}
-		itemCount = itemCount32;
 
+		itemCount = itemCount32;
 		archive->Close();
 		return true;
 	}
-	bool Utility::GetItemsNames(const SevenZipLibrary& library, const TString& archivePath, CompressionFormatEnum& format, size_t& itemCount, std::vector<TString>& itemnames, std::vector<size_t>& origsizes, ProgressNotifier* notifier)
+	bool GetItemsNames(const Library& library, const TString& archivePath, CompressionFormatEnum& format, size_t& itemCount, std::vector<TString>& itemnames, std::vector<size_t>& origsizes, ProgressNotifier* notifier)
 	{
-		CComPtr<IStream> fileStream = FileSys::OpenFileToRead(archivePath);
-
-		if (fileStream == NULL)
+		auto fileStream = FileSystem::OpenFileToRead(archivePath);
+		if (!fileStream)
 		{
 			return false;
-			//throw SevenZipException( StrFmt( _T( "Could not open archive \"%s\"" ), m_archivePath.c_str() ) );
 		}
 
-		CComPtr<IInArchive> archive = Utility::GetArchiveReader(library, format);
-		CComPtr<InStreamWrapper> inFile = new InStreamWrapper(fileStream);
-		CComPtr<ArchiveOpenCallback> openCallback = new ArchiveOpenCallback(notifier);
+		auto archive = Utility::GetArchiveReader(library, format);
+		auto inFile = CreateObject<InStreamWrapper>(fileStream, notifier);
+		auto openCallback = CreateObject<ArchiveOpenCallback>(notifier);
 
-		HRESULT hr = archive->Open(inFile, 0, openCallback);
+		HRESULT hr = archive->Open(inFile, nullptr, openCallback);
 		if (hr != S_OK)
 		{
 			return false;
-			//throw SevenZipException( GetCOMErrMsg( _T( "Open archive" ), hr ) );
 		}
 
 		UInt32 itemCount32;
@@ -148,7 +144,6 @@ namespace SevenZip
 		if (hr != S_OK)
 		{
 			return false;
-			//throw SevenZipException( GetCOMErrMsg( _T( "Open archive" ), hr ) );
 		}
 		itemCount = itemCount32;
 
@@ -166,12 +161,11 @@ namespace SevenZip
 		for (UInt32 i = 0; i < itemCount; i++)
 		{
 			// Get uncompressed size of file
-			CPropVariant prop;
+			VariantProperty prop;
 			hr = archive->GetProperty(i, kpidSize, &prop);
 			if (hr != S_OK)
 			{
 				return false;
-				//throw SevenZipException( GetCOMErrMsg( _T( "Open archive" ), hr ) );
 			}
 
 			origsizes[i] = prop.intVal;
@@ -181,13 +175,12 @@ namespace SevenZip
 			if (hr != S_OK)
 			{
 				return false;
-				//throw SevenZipException( GetCOMErrMsg( _T( "Open archive" ), hr ) );
 			}
 
-			//valid string? pass back the found value and call the callback function if set
+			// Valid string? Pass back the found value and call the callback function if set
 			if (prop.vt == VT_BSTR)
 			{
-				WCHAR* path = prop.bstrVal;
+				const wchar_t* path = prop.bstrVal;
 				itemnames[i] = path;
 			}
 
@@ -205,33 +198,33 @@ namespace SevenZip
 		return true;
 	}
 	
-	bool Utility::DetectCompressionFormat(const SevenZipLibrary& library, const TString& archivePath, CompressionFormatEnum& archiveCompressionFormat, ProgressNotifier* notifier)
+	bool DetectCompressionFormat(const Library& library, const TString& archivePath, CompressionFormatEnum& archiveCompressionFormat, ProgressNotifier* notifier)
 	{
 		// Add more formats here if 7zip supports more formats in the future
 		std::vector<CompressionFormatEnum> availableFormats;
 
 		// Add most believable by scanning file extension
-		size_t nDotPos = archivePath.rfind(_T('.'));
-		if (nDotPos != TString::npos)
+		size_t dotPos = archivePath.rfind(_T('.'));
+		if (dotPos != TString::npos)
 		{
-			auto format = CompressionFormatFromEnding(archivePath.substr(nDotPos));
+			auto format = CompressionFormatFromExtension(archivePath.substr(dotPos));
 			if (format != CompressionFormat::Unknown)
 			{
 				availableFormats.push_back(format);
 			}
 		}
 
-		availableFormats.push_back(CompressionFormat::SevenZip);
-		availableFormats.push_back(CompressionFormat::Zip);
-		availableFormats.push_back(CompressionFormat::Rar);
-		availableFormats.push_back(CompressionFormat::Rar5);
-		availableFormats.push_back(CompressionFormat::GZip);
-		availableFormats.push_back(CompressionFormat::BZip2);
-		availableFormats.push_back(CompressionFormat::Tar);
-		availableFormats.push_back(CompressionFormat::Lzma);
-		availableFormats.push_back(CompressionFormat::Lzma86);
-		availableFormats.push_back(CompressionFormat::Cab);
-		availableFormats.push_back(CompressionFormat::Iso);
+		availableFormats.emplace_back(CompressionFormat::SevenZip);
+		availableFormats.emplace_back(CompressionFormat::Zip);
+		availableFormats.emplace_back(CompressionFormat::Rar);
+		availableFormats.emplace_back(CompressionFormat::Rar5);
+		availableFormats.emplace_back(CompressionFormat::GZip);
+		availableFormats.emplace_back(CompressionFormat::BZip2);
+		availableFormats.emplace_back(CompressionFormat::Tar);
+		availableFormats.emplace_back(CompressionFormat::Lzma);
+		availableFormats.emplace_back(CompressionFormat::Lzma86);
+		availableFormats.emplace_back(CompressionFormat::Cab);
+		availableFormats.emplace_back(CompressionFormat::Iso);
 
 		if (notifier)
 		{
@@ -241,16 +234,15 @@ namespace SevenZip
 		// Check each format for one that works
 		for (size_t i = 0; i < availableFormats.size(); i++)
 		{
-			CComPtr<IStream> fileStream = FileSys::OpenFileToRead(archivePath);
-			if (fileStream == NULL)
+			CComPtr<IStream> fileStream = FileSystem::OpenFileToRead(archivePath);
+			if (!fileStream)
 			{
 				return false;
 			}
 
 			if (notifier)
 			{
-				TString message = _T("Detecting format. Trying ") + availableFormats[i].GetString();
-				notifier->OnMajorProgress(message, i);
+				notifier->OnMajorProgress(_T("Detecting format. Trying ") + availableFormats[i].GetString(), i);
 				if (notifier->ShouldStop())
 				{
 					return false;
@@ -258,11 +250,11 @@ namespace SevenZip
 			}
 
 			archiveCompressionFormat = availableFormats[i];
-			CComPtr<IInArchive> archive = Utility::GetArchiveReader(library, archiveCompressionFormat);
-			CComPtr<InStreamWrapper> inFile = new InStreamWrapper(fileStream, notifier);
-			CComPtr<ArchiveOpenCallback> openCallback = new ArchiveOpenCallback(notifier);
+			auto archive = Utility::GetArchiveReader(library, archiveCompressionFormat);
+			auto inFile = CreateObject<InStreamWrapper>(fileStream, notifier);
+			auto openCallback = CreateObject<ArchiveOpenCallback>(notifier);
 
-			HRESULT hr = archive->Open(inFile, 0, openCallback);
+			HRESULT hr = archive->Open(inFile, nullptr, openCallback);
 			archive->Close();
 			if (hr == S_OK)
 			{
@@ -293,35 +285,30 @@ namespace SevenZip
 		archiveCompressionFormat = CompressionFormat::Unknown;
 		return true;
 	}
-	TString Utility::EndingFromCompressionFormat(const CompressionFormatEnum& format)
+	TString ExtensionFromCompressionFormat(const CompressionFormatEnum& format)
 	{
 		switch (format)
 		{
 			case CompressionFormat::SevenZip:
 			{
 				return _T(".7z");
-				break;
 			}
 			case CompressionFormat::Zip:
 			{
 				return _T(".zip");
-				break;
 			}
 			case CompressionFormat::Rar:
 			case CompressionFormat::Rar5:
 			{
 				return _T(".rar");
-				break;
 			}
 			case CompressionFormat::GZip:
 			{
 				return _T(".gz");
-				break;
 			}
 			case CompressionFormat::BZip2:
 			{
 				return _T(".bz");
-				break;
 			}
 			case CompressionFormat::Tar:
 			{
@@ -331,70 +318,66 @@ namespace SevenZip
 			case CompressionFormat::Lzma:
 			{
 				return _T(".lzma");
-				break;
 			}
 			case CompressionFormat::Lzma86:
 			{
 				return _T(".lzma86");
-				break;
 			}
 			case CompressionFormat::Cab:
 			{
 				return _T(".cab");
-				break;
 			}
 			case CompressionFormat::Iso:
 			{
 				return _T(".iso");
-				break;
 			}
 		}
-		return _T(".zip");
+		return {};
 	}
-	CompressionFormatEnum Utility::CompressionFormatFromEnding(const TString& extWithDot)
+	CompressionFormatEnum CompressionFormatFromExtension(const TString& extWithDot)
 	{
-		TString sExt = ToLower(extWithDot);
-		if (sExt == _T(".7z"))
+		TString ext = ToLower(extWithDot);
+		if (ext == _T(".7z"))
 		{
 			return CompressionFormat::SevenZip;
 		}
-		if (sExt == _T(".zip"))
+		if (ext == _T(".zip"))
 		{
 			return CompressionFormat::Zip;
 		}
-		if (sExt == _T(".rar"))
+		if (ext == _T(".rar"))
 		{
 			return CompressionFormat::Rar;
 		}
-		if (sExt == _T(".rar5"))
+		if (ext == _T(".rar5"))
 		{
 			return CompressionFormat::Rar5;
 		}
-		if (sExt == _T(".gz") || sExt == _T(".gzip"))
+		if (ext == _T(".gz") || ext == _T(".gzip"))
 		{
 			return CompressionFormat::GZip;
 		}
-		if (sExt == _T(".bz2") || sExt == _T(".bzip2"))
+		if (ext == _T(".bz2") || ext == _T(".bzip2"))
 		{
 			return CompressionFormat::BZip2;
 		}
-		if (sExt == _T(".tar"))
+		if (ext == _T(".tar"))
 		{
 			return CompressionFormat::Tar;
 		}
-		if (sExt == _T(".lz") || sExt == _T(".lzma"))
+		if (ext == _T(".lz") || ext == _T(".lzma"))
 		{
 			return CompressionFormat::Lzma;
 		}
-		if (sExt == _T(".lz86") || sExt == _T(".lzma86"))
+		if (ext == _T(".lz86") || ext == _T(".lzma86"))
 		{
 			return CompressionFormat::Lzma86;
 		}
-		if (sExt == _T(".cab"))
+		if (ext == _T(".cab"))
 		{
 			return CompressionFormat::Cab;
 		}
-		if (sExt == _T(".iso"))
+		if (ext == _T(".iso"))
 		{
 			return CompressionFormat::Iso;
 		}

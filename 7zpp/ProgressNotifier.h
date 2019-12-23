@@ -7,6 +7,9 @@ namespace SevenZip
 	class ProgressNotifier
 	{
 		public:
+			virtual ~ProgressNotifier() = default;
+
+		public:
 			// Called whenever operation can be stopped. Return true to abort operation.
 			virtual bool ShouldStop()
 			{
@@ -14,16 +17,16 @@ namespace SevenZip
 			}
 
 			// Called at beginning
-			virtual void OnStartWithTotal(const TCharType* filePath, int64_t totalBytes) {}
+			virtual void OnStartWithTotal(const TChar* filePath, int64_t totalBytes) {}
 
 			// Called whenever progress has updated with a bytes complete
-			virtual void OnMajorProgress(const TCharType* filePath, int64_t bytesCompleted) {}
+			virtual void OnMajorProgress(const TChar* filePath, int64_t bytesCompleted) {}
 
 			// Called when single file progress has reached 100%, returns the filepath that completed
-			virtual void OnMinorProgress(const TCharType* filePath, int64_t bytesCompleted, int64_t totalBytes) {}
+			virtual void OnMinorProgress(const TChar* filePath, int64_t bytesCompleted, int64_t totalBytes) {}
 
 			// Called when progress has reached 100%
-			virtual void OnDone(const TCharType* filePath = _T("")) {}
+			virtual void OnDone(const TChar* filePath = _T("")) {}
 
 		public:
 			void OnStartWithTotal(const TString& filePath, int64_t totalBytes)

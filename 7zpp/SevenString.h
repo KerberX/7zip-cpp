@@ -5,11 +5,12 @@
 namespace SevenZip
 {
 	#ifdef _UNICODE
-	typedef std::wstring TString;
-	typedef std::wstring_view TStringView;
+		using TString = std::wstring;
+		using TStringView = std::wstring_view;
 	#else
-	typedef std::string TString;
-	typedef std::string_view TStringView;
+		using TString = std::string;
+		using TStringView = std::string_view
 	#endif
-	typedef TString::value_type TCharType;
+
+	using TChar = TString::value_type;
 }

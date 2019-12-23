@@ -6,79 +6,76 @@
 
 namespace SevenZip
 {
-	namespace intl
+	ArchiveOpenCallback::ArchiveOpenCallback(ProgressNotifier* notifier)
+		:m_Notifier(notifier)
 	{
-		ArchiveOpenCallback::ArchiveOpenCallback(ProgressNotifier* notifier)
-			:m_Notifier(notifier)
-		{
-		}
-		ArchiveOpenCallback::~ArchiveOpenCallback()
-		{
-		}
+	}
+	ArchiveOpenCallback::~ArchiveOpenCallback()
+	{
+	}
 
-		STDMETHODIMP ArchiveOpenCallback::QueryInterface(REFIID iid, void** ppvObject)
+	STDMETHODIMP ArchiveOpenCallback::QueryInterface(REFIID iid, void** ppvObject)
+	{
+		if (iid == __uuidof(IUnknown))
 		{
-			if (iid == __uuidof(IUnknown))
-			{
-				*ppvObject = reinterpret_cast<IUnknown*>(this);
-				AddRef();
-				return S_OK;
-			}
-
-			if (iid == IID_IArchiveOpenCallback)
-			{
-				*ppvObject = static_cast<IArchiveOpenCallback*>(this);
-				AddRef();
-				return S_OK;
-			}
-
-			if (iid == IID_ICryptoGetTextPassword)
-			{
-				*ppvObject = static_cast<ICryptoGetTextPassword*>(this);
-				AddRef();
-				return S_OK;
-			}
-
-			return E_NOINTERFACE;
-		}
-		STDMETHODIMP_(ULONG) ArchiveOpenCallback::AddRef()
-		{
-			return static_cast<ULONG>(InterlockedIncrement(&m_RefCount));
-		}
-		STDMETHODIMP_(ULONG) ArchiveOpenCallback::Release()
-		{
-			ULONG res = static_cast<ULONG>(InterlockedDecrement(&m_RefCount));
-			if (res == 0)
-			{
-				delete this;
-			}
-			return res;
-		}
-
-		STDMETHODIMP ArchiveOpenCallback::SetTotal(const UInt64* files, const UInt64* bytes)
-		{
-			if (bytes)
-			{
-				m_Total = *bytes;
-			}
+			*ppvObject = reinterpret_cast<IUnknown*>(this);
+			AddRef();
 			return S_OK;
 		}
-		STDMETHODIMP ArchiveOpenCallback::SetCompleted(const UInt64* files, const UInt64* bytes)
+
+		if (iid == IID_IArchiveOpenCallback)
 		{
-			if (m_Notifier)
-			{
-				m_Notifier->OnMinorProgress(_T(""), bytes ? *bytes : 0, m_Total);
-				if (m_Notifier->ShouldStop())
-				{
-					return HRESULT_FROM_WIN32(ERROR_CANCELLED);
-				}
-			}
+			*ppvObject = static_cast<IArchiveOpenCallback*>(this);
+			AddRef();
 			return S_OK;
 		}
-		STDMETHODIMP ArchiveOpenCallback::CryptoGetTextPassword(BSTR* password)
+
+		if (iid == IID_ICryptoGetTextPassword)
 		{
-			// TODO: support passwords
-			return E_ABORT;
+			*ppvObject = static_cast<ICryptoGetTextPassword*>(this);
+			AddRef();
+			return S_OK;
 		}
+
+		return E_NOINTERFACE;
+	}
+	STDMETHODIMP_(ULONG) ArchiveOpenCallback::AddRef()
+	{
+		return static_cast<ULONG>(InterlockedIncrement(&m_RefCount));
+	}
+	STDMETHODIMP_(ULONG) ArchiveOpenCallback::Release()
+	{
+		ULONG res = static_cast<ULONG>(InterlockedDecrement(&m_RefCount));
+		if (res == 0)
+		{
+			delete this;
+		}
+		return res;
+	}
+
+	STDMETHODIMP ArchiveOpenCallback::SetTotal(const UInt64* files, const UInt64* bytes)
+	{
+		if (bytes)
+		{
+			m_Total = *bytes;
+		}
+		return S_OK;
+	}
+	STDMETHODIMP ArchiveOpenCallback::SetCompleted(const UInt64* files, const UInt64* bytes)
+	{
+		if (m_Notifier)
+		{
+			m_Notifier->OnMinorProgress(_T(""), bytes ? *bytes : 0, m_Total);
+			if (m_Notifier->ShouldStop())
+			{
+				return HRESULT_FROM_WIN32(ERROR_CANCELLED);
+			}
+		}
+		return S_OK;
+	}
+	STDMETHODIMP ArchiveOpenCallback::CryptoGetTextPassword(BSTR* password)
+	{
+		// TODO: support passwords
+		return E_ABORT;
 	}
 }

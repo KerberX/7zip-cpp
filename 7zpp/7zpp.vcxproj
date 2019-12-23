@@ -179,10 +179,10 @@
     <ClCompile>
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>$(SolutionDir)\7z\C;$(SolutionDir)\7z\CPP;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>SEVENZIPCPP_LIB;WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>true</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
-      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <ProgramDataBaseFileName>$(OutDir)7zpp_ud.pdb</ProgramDataBaseFileName>
       <WarningLevel>Level3</WarningLevel>
@@ -201,10 +201,10 @@
     <ClCompile>
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>$(SolutionDir)\7z\C;$(SolutionDir)\7z\CPP;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>SEVENZIPCPP_LIB;WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>true</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
-      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <ProgramDataBaseFileName>$(OutDir)7zpp_ud.pdb</ProgramDataBaseFileName>
       <WarningLevel>Level3</WarningLevel>
@@ -221,8 +221,8 @@
       <Optimization>MaxSpeed</Optimization>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <AdditionalIncludeDirectories>$(SolutionDir)\7z\C;$(SolutionDir)\7z\CPP;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <PreprocessorDefinitions>SEVENZIPCPP_LIB;WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <ProgramDataBaseFileName>$(OutDir)7zpp_u.pdb</ProgramDataBaseFileName>
@@ -244,8 +244,8 @@
       <Optimization>MaxSpeed</Optimization>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <AdditionalIncludeDirectories>$(SolutionDir)\7z\C;$(SolutionDir)\7z\CPP;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <PreprocessorDefinitions>SEVENZIPCPP_LIB;WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <ProgramDataBaseFileName>$(OutDir)7zpp_u.pdb</ProgramDataBaseFileName>
@@ -263,10 +263,10 @@
     <ClCompile>
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>$(SolutionDir)\7z\C;$(SolutionDir)\7z\CPP;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>SEVENZIPCPP_LIB;WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>true</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
-      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <ProgramDataBaseFileName>$(OutDir)7zpp_ud.pdb</ProgramDataBaseFileName>
       <WarningLevel>Level3</WarningLevel>
@@ -287,10 +287,10 @@
     <ClCompile>
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>$(SolutionDir)\7z\C;$(SolutionDir)\7z\CPP;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>SEVENZIPCPP_LIB;WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>true</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
-      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <ProgramDataBaseFileName>$(OutDir)7zpp_ud.pdb</ProgramDataBaseFileName>
       <WarningLevel>Level3</WarningLevel>
@@ -309,8 +309,8 @@
       <Optimization>MaxSpeed</Optimization>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <AdditionalIncludeDirectories>$(SolutionDir)\7z\C;$(SolutionDir)\7z\CPP;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <PreprocessorDefinitions>SEVENZIPCPP_LIB;WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <ProgramDataBaseFileName>$(OutDir)7zpp_u.pdb</ProgramDataBaseFileName>
@@ -334,8 +334,8 @@
       <Optimization>MaxSpeed</Optimization>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <AdditionalIncludeDirectories>$(SolutionDir)\7z\C;$(SolutionDir)\7z\CPP;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <PreprocessorDefinitions>SEVENZIPCPP_LIB;WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <ProgramDataBaseFileName>$(OutDir)7zpp_u.pdb</ProgramDataBaseFileName>
@@ -356,12 +356,12 @@
     <ClCompile Include="ArchiveOpenCallback.cpp" />
     <ClCompile Include="ArchiveUpdateCallback.cpp" />
     <ClCompile Include="CompressionFormat.cpp" />
-    <ClCompile Include="FileSys.cpp" />
+    <ClCompile Include="FileSystem.cpp" />
     <ClCompile Include="GUIDs.cpp" />
     <ClCompile Include="InStreamWrapper.cpp" />
     <ClCompile Include="OutStreamWrapper.cpp" />
     <ClCompile Include="PathScanner.cpp" />
-    <ClCompile Include="PropVariant.cpp" />
+    <ClCompile Include="VariantProperty.cpp" />
     <ClCompile Include="SevenZipArchive.cpp" />
     <ClCompile Include="SevenZipException.cpp" />
     <ClCompile Include="SevenZipLibrary.cpp" />
@@ -383,11 +383,12 @@
     <ClInclude Include="ArchiveExtractCallback.h" />
     <ClInclude Include="ArchiveOpenCallback.h" />
     <ClInclude Include="ArchiveUpdateCallback.h" />
+    <ClInclude Include="Common.h" />
     <ClInclude Include="CompressionFormat.h" />
     <ClInclude Include="CompressionLevel.h" />
     <ClInclude Include="Enum.h" />
     <ClInclude Include="FileInfo.h" />
-    <ClInclude Include="FileSys.h" />
+    <ClInclude Include="FileSystem.h" />
     <ClInclude Include="GUIDs.h" />
     <ClInclude Include="InStreamWrapper.h" />
     <ClInclude Include="ListingNotifier.h" />
@@ -395,7 +396,7 @@
     <ClInclude Include="OutStreamWrapper.h" />
     <ClInclude Include="PathScanner.h" />
     <ClInclude Include="ProgressNotifier.h" />
-    <ClInclude Include="PropVariant.h" />
+    <ClInclude Include="VariantProperty.h" />
     <ClInclude Include="SevenZipArchive.h" />
     <ClInclude Include="SevenZipException.h" />
     <ClInclude Include="SevenZipLibrary.h" />

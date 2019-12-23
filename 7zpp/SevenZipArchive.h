@@ -5,14 +5,15 @@
 
 namespace SevenZip
 {
-	class SevenZipLibrary;
+	class Library;
 	class ProgressNotifier;
 	class ListingNotifier;
-	typedef std::vector<TString> TStringVector;
-	typedef std::vector<uint32_t> IndexesVector;
-	typedef std::vector<intl::FilePathInfo> FilePathInfoVector;
-	typedef std::vector<uint8_t> DataBuffer;
-	typedef std::unordered_map<size_t, DataBuffer> DataBufferMap;
+
+	using TStringVector = std::vector<TString>;
+	using IndexesVector = std::vector<uint32_t>;
+	using FilePathInfoVector = std::vector<FilePathInfo>;
+	using DataBuffer = std::vector<uint8_t>;
+	using DataBufferMap = std::unordered_map<size_t, DataBuffer>;
 
 	enum CompressionMethod
 	{
@@ -23,15 +24,15 @@ namespace SevenZip
 		PPMD,
 		BZIP2,
 	};
+}
 
-	class SevenZipArchive
+namespace SevenZip
+{
+	class Archive
 	{
-		public:
-			TString GetExtensionFromFormat(CompressionFormatEnum nFormat);
-
 		protected:
-			const SevenZipLibrary& m_LibraryInstance;
-			ProgressNotifier* m_Notifier = NULL;
+			const Library& m_LibraryInstance;
+			ProgressNotifier* m_Notifier = nullptr;
 			TString m_ArchiveFilePath;
 
 			// Metadata
@@ -51,14 +52,14 @@ namespace SevenZip
 
 		protected:
 			// Metadata
-			void InvalidateChace();
+			void InvalidateCache();
 			bool InitNumberOfItems();
 			bool InitItemsNames();
 			bool DetectCompressionFormatHelper(CompressionFormatEnum& format);
 			bool ReadInArchiveMetadataHelper();
 
 			// Extraction
-			bool ExtractToDisk(const TString& directory, const IndexesVector* filesIndices = NULL, const TStringVector& finalPaths = TStringVector(), ProgressNotifier* notifier = NULL) const;
+			bool ExtractToDisk(const TString& directory, const IndexesVector* filesIndices = nullptr, const TStringVector& finalPaths = TStringVector(), ProgressNotifier* notifier = nullptr) const;
 			IndexesVector RemoveInvalidIndexes(const IndexesVector& tSourceArray) const;
 
 			// Compression
@@ -69,8 +70,8 @@ namespace SevenZip
 			bool CompressFilesToArchive(const TString& pathPrefix, const FilePathInfoVector& filePaths, const TStringVector& inArchiveFilePaths, ProgressNotifier* notifier);
 
 		public:
-			SevenZipArchive(const SevenZipLibrary& library, const TString& archivePath, ProgressNotifier* notifier = NULL);
-			virtual ~SevenZipArchive();
+			Archive(const Library& library, const TString& archivePath, ProgressNotifier* notifier = nullptr);
+			virtual ~Archive() = default;
 
 		public:
 			// Metadata
@@ -130,36 +131,36 @@ namespace SevenZip
 			}
 
 			/* Listing */
-			virtual bool ListArchive(ListingNotifier* callback = NULL) const;
+			virtual bool ListArchive(ListingNotifier* callback = nullptr) const;
 
 			/* Extraction */
 			// Extract entire archive into specified directory
-			virtual bool ExtractArchive(const TString& directory, ProgressNotifier* notifier = NULL) const;
+			virtual bool ExtractArchive(const TString& directory, ProgressNotifier* notifier = nullptr) const;
 			
 			// Extract only specified files into directory
-			virtual bool ExtractArchive(const IndexesVector& filesIndices, const TString& destDirectory, ProgressNotifier* notifier = NULL) const;
+			virtual bool ExtractArchive(const IndexesVector& filesIndices, const TString& destDirectory, ProgressNotifier* notifier = nullptr) const;
 
 			// Extract only specified files into corresponding files path
-			virtual bool ExtractArchive(const IndexesVector& filesIndices, const TStringVector& finalPaths, ProgressNotifier* notifier = NULL) const;
+			virtual bool ExtractArchive(const IndexesVector& filesIndices, const TStringVector& finalPaths, ProgressNotifier* notifier = nullptr) const;
 			
 			// Extract specified file into memory buffer
-			virtual bool ExtractToMemory(const IndexesVector& filesIndices, DataBufferMap& bufferMap, ProgressNotifier* notifier = NULL) const;
-			virtual bool ExtractToMemory(uint32_t index, DataBuffer& buffer, ProgressNotifier* notifier = NULL) const;
+			virtual bool ExtractToMemory(const IndexesVector& filesIndices, DataBufferMap& bufferMap, ProgressNotifier* notifier = nullptr) const;
+			virtual bool ExtractToMemory(uint32_t index, DataBuffer& buffer, ProgressNotifier* notifier = nullptr) const;
 	
 			/* Compression */
 			// Includes the last directory as the root in the archive, e.g. specifying "C:\Temp\MyFolder"
 			// makes "MyFolder" the single root item in archive with the files within it included.
-			virtual bool CompressDirectory(const TString& directory, bool bRecursive = true, ProgressNotifier* notifier = NULL);
+			virtual bool CompressDirectory(const TString& directory, bool bRecursive = true, ProgressNotifier* notifier = nullptr);
 
 			// Excludes the last directory as the root in the archive, its contents are at root instead. E.g.
 			// specifying "C:\Temp\MyFolder" make the files in "MyFolder" the root items in the archive.
-			virtual bool CompressFiles(const TString& directory, const TString& searchFilter = TString(), bool bRecursive = true, ProgressNotifier* notifier = NULL);
-			virtual bool CompressSpecifiedFiles(const TStringVector& sourceFiles, const TStringVector& archivePaths, ProgressNotifier* notifier = NULL);
+			virtual bool CompressFiles(const TString& directory, const TString& searchFilter = TString(), bool bRecursive = true, ProgressNotifier* notifier = nullptr);
+			virtual bool CompressSpecifiedFiles(const TStringVector& sourceFiles, const TStringVector& archivePaths, ProgressNotifier* notifier = nullptr);
 
 			// Compress just this single file as the root item in the archive.
-			virtual bool CompressFile(const TString& filePath, ProgressNotifier* notifier = NULL);
+			virtual bool CompressFile(const TString& filePath, ProgressNotifier* notifier = nullptr);
 
 			// Same as above, but places compressed file into 'archivePath' folder inside the archive
-			virtual bool CompressFile(const TString& filePath, const TString& archivePath, ProgressNotifier* notifier = NULL);
+			virtual bool CompressFile(const TString& filePath, const TString& archivePath, ProgressNotifier* notifier = nullptr);
 	};
 }

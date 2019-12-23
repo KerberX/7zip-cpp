@@ -4,41 +4,39 @@
 #include <7zip/Archive/IArchive.h>
 #include <7zTypes.h>
 #include "GUIDs.h"
-#include "FileSys.h"
+#include "FileSystem.h"
 #include "ArchiveOpenCallback.h"
 #include "InStreamWrapper.h"
 
 namespace SevenZip
 {
-	using namespace intl;
 	class ProgressNotifier;
+}
 
-	class Utility
+namespace SevenZip::Utility
+{
+	TString& MakeLower(TString& string);
+	TString& MakeUpper(TString& string);
+	inline TString ToLower(const TString& string)
 	{
-		public:
-			static TString& ToLower(TString& string);
-			static TString& ToUpper(TString& string);
-			static TString ToLower(const TString& string)
-			{
-				TString s = string;
-				return ToLower(s);
-			}
-			static TString ToUpper(const TString& string)
-			{
-				TString s = string;
-				return ToUpper(s);
-			}
+		TString s = string;
+		return MakeLower(s);
+	}
+	inline TString ToUpper(const TString& string)
+	{
+		TString s = string;
+		return MakeUpper(s);
+	}
 
-			static const GUID* GetCompressionGUID(const CompressionFormatEnum& format);
-			
-			static CComPtr<IInArchive> GetArchiveReader(const SevenZipLibrary& library, const CompressionFormatEnum& format);
-			static CComPtr<IOutArchive> GetArchiveWriter(const SevenZipLibrary& library, const CompressionFormatEnum& format);
-			
-			static bool DetectCompressionFormat(const SevenZipLibrary& library, const TString& archivePath, CompressionFormatEnum & archiveCompressionFormat, ProgressNotifier* notifier = NULL);
-			static bool GetNumberOfItems(const SevenZipLibrary& library, const TString& archivePath, CompressionFormatEnum& format, size_t& itemCount, ProgressNotifier* notifier = NULL);
-			static bool GetItemsNames(const SevenZipLibrary& library, const TString& archivePath, CompressionFormatEnum& format, size_t& itemCount, std::vector<TString>& itemnames, std::vector<size_t>& origsizes, ProgressNotifier* notifier = NULL);
-			
-			static TString EndingFromCompressionFormat(const CompressionFormatEnum& format);
-			static CompressionFormatEnum CompressionFormatFromEnding(const TString& extWithDot);
-	};
+	std::optional<GUID> GetCompressionGUID(const CompressionFormatEnum& format);
+
+	CComPtr<IInArchive> GetArchiveReader(const Library& library, const CompressionFormatEnum& format);
+	CComPtr<IOutArchive> GetArchiveWriter(const Library& library, const CompressionFormatEnum& format);
+
+	bool DetectCompressionFormat(const Library& library, const TString& archivePath, CompressionFormatEnum& archiveCompressionFormat, ProgressNotifier* notifier = nullptr);
+	bool GetNumberOfItems(const Library& library, const TString& archivePath, CompressionFormatEnum& format, size_t& itemCount, ProgressNotifier* notifier = nullptr);
+	bool GetItemsNames(const Library& library, const TString& archivePath, CompressionFormatEnum& format, size_t& itemCount, std::vector<TString>& itemnames, std::vector<size_t>& origsizes, ProgressNotifier* notifier = nullptr);
+
+	TString ExtensionFromCompressionFormat(const CompressionFormatEnum& format);
+	CompressionFormatEnum CompressionFormatFromExtension(const TString& extWithDot);
 }

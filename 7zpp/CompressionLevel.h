@@ -12,9 +12,9 @@ namespace SevenZip
 			Normal
 		};
 
-		typedef intl::EnumerationDefinitionNoStrings _Definition;
-		typedef intl::EnumerationValue<_Enum, _Definition, Normal> _Value;
+		using _Definition = Internal::EnumerationDefinitionNoStrings;
+		using _Value = Internal::EnumerationValue<_Enum, _Definition, Normal>;
 	};
 
-	typedef CompressionLevel::_Value CompressionLevelEnum;
+	using CompressionLevelEnum = CompressionLevel::_Value;
 }

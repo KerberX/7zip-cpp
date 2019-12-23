@@ -1,127 +1,119 @@
 #include "StdAfx.h"
 #include "PathScanner.h"
-#include "FileSys.h"
+#include "FileSystem.h"
 
-
-namespace SevenZip
+namespace SevenZip::PathScanner::Internal
 {
-namespace intl
-{
-
-void PathScanner::Scan( const TString& root, Callback& cb )
-{
-	Scan( root, _T( "*" ), cb );
-}
-
-void PathScanner::Scan( const TString& root, const TString& searchPattern, Callback& cb )
-{
-	std::deque< TString > directories;
-	directories.push_back( root );
-
-	while ( !directories.empty() )
+	bool IsAllFilesPattern(const TString& searchPattern)
 	{
-		TString directory = directories.front();
-		directories.pop_front();
+		return searchPattern == _T("*") || searchPattern == _T("*.*");
+	}
+	bool IsSpecialFileName(const TString& fileName)
+	{
+		return fileName == _T(".") || fileName == _T("..");
+	}
+	bool IsDirectory(const WIN32_FIND_DATA& fileData)
+	{
+		return (fileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
+	}
 
-		if ( ExamineFiles( directory, searchPattern, cb ) )
+	FilePathInfo ConvertFindInfo(const TString& directory, const WIN32_FIND_DATA& fileData)
+	{
+		FilePathInfo file;
+		file.FileName = fileData.cFileName;
+		file.FilePath = FileSystem::AppendPath(directory, file.FileName);
+		file.LastWriteTime = fileData.ftLastWriteTime;
+		file.CreationTime = fileData.ftCreationTime;
+		file.LastAccessTime = fileData.ftLastAccessTime;
+		file.Attributes = fileData.dwFileAttributes;
+		file.IsDirectory = IsDirectory(fileData);
+
+		ULARGE_INTEGER size;
+		size.LowPart = fileData.nFileSizeLow;
+		size.HighPart = fileData.nFileSizeHigh;
+		file.Size = size.QuadPart;
+
+		return file;
+	}
+	
+	bool SearchFiles(const TString& directory, const TString& searchPattern, Callback& callback)
+	{
+		TString searchQuery = FileSystem::AppendPath(directory, searchPattern);
+		bool exit = false;
+
+		WIN32_FIND_DATA findData = {};
+		HANDLE handle = ::FindFirstFile(searchQuery.c_str(), &findData);
+		if (handle == INVALID_HANDLE_VALUE)
 		{
-			break;
+			return exit;
 		}
 
-		ExamineDirectories( directory, directories, cb );
-	}
-}
+		callback.EnterDirectory(directory);
 
-bool PathScanner::ExamineFiles( const TString& directory, const TString& searchPattern, Callback& cb )
-{
-	TString findStr = FileSys::AppendPath( directory, searchPattern );
-	bool exit = false;
+		do
+		{
+			FilePathInfo fileInfo = ConvertFindInfo(directory, findData);
+			if (!fileInfo.IsDirectory && !IsSpecialFileName(fileInfo.FileName))
+			{
+				callback.ExamineFile(fileInfo, exit);
+			}
+		}
+		while (!exit && ::FindNextFile(handle, &findData));
 
-	WIN32_FIND_DATA fdata;
-	HANDLE hFile = FindFirstFile( findStr.c_str(), &fdata );
-	if ( hFile == INVALID_HANDLE_VALUE )
-	{
+		if (!exit)
+		{
+			callback.LeaveDirectory(directory);
+		}
+
+		::FindClose(handle);
 		return exit;
 	}
-
-	cb.EnterDirectory( directory );
-
-	do
+	void SearchDirectories(const TString& directory, std::deque<TString>& subDirectories, Callback& callback)
 	{
-		FilePathInfo fpInfo = ConvertFindInfo( directory, fdata );
-		if ( !fpInfo.IsDirectory && !IsSpecialFileName( fpInfo.FileName ) )
+		TString searchQuery = FileSystem::AppendPath(directory, _T("*"));
+
+		WIN32_FIND_DATA findData = {};
+		HANDLE handle = ::FindFirstFile(searchQuery.c_str(), &findData);
+		if (handle == INVALID_HANDLE_VALUE)
 		{
-			cb.ExamineFile( fpInfo, exit );
+			return;
 		}
-	} 
-	while ( !exit && FindNextFile( hFile, &fdata ) );
 
-	if ( !exit )
-	{
-		cb.LeaveDirectory( directory );
-	}
-
-	FindClose( hFile );
-	return exit;
-}
-
-void PathScanner::ExamineDirectories( const TString& directory, std::deque< TString >& subDirs, Callback& cb )
-{
-	TString findStr = FileSys::AppendPath( directory, _T( "*" ) );
-
-	WIN32_FIND_DATA fdata;
-	HANDLE hFile = FindFirstFile( findStr.c_str(), &fdata );
-	if ( hFile == INVALID_HANDLE_VALUE )
-	{
-		return;
-	}
-
-	do
-	{
-		FilePathInfo fpInfo = ConvertFindInfo( directory, fdata );
-		if ( fpInfo.IsDirectory && !IsSpecialFileName( fpInfo.FileName ) && cb.ShouldDescend( fpInfo ) )
+		do
 		{
-			subDirs.push_back( fpInfo.FilePath );
+			FilePathInfo fileInfo = ConvertFindInfo(directory, findData);
+			if (fileInfo.IsDirectory && !IsSpecialFileName(fileInfo.FileName) && callback.ShouldDescend(fileInfo))
+			{
+				subDirectories.emplace_back(std::move(fileInfo.FilePath));
+			}
 		}
-	} 
-	while ( FindNextFile( hFile, &fdata ) );
-		
-	FindClose( hFile );
+		while (::FindNextFile(handle, &findData));
+
+		::FindClose(handle);
+	}
 }
 
-bool PathScanner::IsAllFilesPattern( const TString& searchPattern )
+namespace SevenZip::PathScanner
 {
-	return searchPattern == _T( "*" ) || searchPattern == _T( "*.*" );
-}
+	void Scan(const TString& root, Callback& callback)
+	{
+		Scan(root, _T("*"), callback);
+	}
+	void Scan(const TString& root, const TString& searchPattern, Callback& callback)
+	{
+		std::deque<TString> directories;
+		directories.push_back(root);
 
-bool PathScanner::IsSpecialFileName( const TString& fileName )
-{
-	return fileName == _T( "." ) || fileName == _T( ".." );
-}
+		while (!directories.empty())
+		{
+			TString directory = directories.front();
+			directories.pop_front();
 
-bool PathScanner::IsDirectory( const WIN32_FIND_DATA& fdata )
-{
-	return ( fdata.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY ) != 0;
-}
-
-FilePathInfo PathScanner::ConvertFindInfo( const TString& directory, const WIN32_FIND_DATA& fdata )
-{
-	FilePathInfo file;
-	file.FileName		= fdata.cFileName;
-	file.FilePath		= FileSys::AppendPath( directory, file.FileName );
-	file.LastWriteTime	= fdata.ftLastWriteTime;
-	file.CreationTime	= fdata.ftCreationTime;
-	file.LastAccessTime	= fdata.ftLastAccessTime;
-	file.Attributes		= fdata.dwFileAttributes;
-	file.IsDirectory	= IsDirectory( fdata );
-
-	ULARGE_INTEGER size;
-	size.LowPart = fdata.nFileSizeLow;
-	size.HighPart = fdata.nFileSizeHigh;
-	file.Size = size.QuadPart;
-
-	return file;
-}
-
-}
+			if (Internal::SearchFiles(directory, searchPattern, callback))
+			{
+				break;
+			}
+			Internal::SearchDirectories(directory, directories, callback);
+		}
+	}
 }

@@ -2,65 +2,60 @@
 #include "SevenZipLibrary.h"
 #include "GUIDs.h"
 
+namespace
+{
+	constexpr auto DefaultLibraryPath = _T("7z.dll");
+}
+
 namespace SevenZip
 {
-	const TString DefaultLibraryPath = _T("7z.dll");
-
-	SevenZipLibrary::SevenZipLibrary()
+	Library::Library()
 	{
 	}
-	SevenZipLibrary::~SevenZipLibrary()
+	Library::~Library()
 	{
 		Free();
 	}
 
-	bool SevenZipLibrary::Load()
+	bool Library::Load()
 	{
 		return Load(DefaultLibraryPath);
 	}
-	bool SevenZipLibrary::Load(const TString& libraryPath)
+	bool Library::Load(const TString& libraryPath)
 	{
-		Free();
-		m_LibraryHandle = LoadLibrary(libraryPath.c_str());
-		if (m_LibraryHandle == NULL)
+		if (!IsLoaded())
 		{
-			return false;
-			//throw SevenZipException( GetWinErrMsg( _T( "LoadLibrary" ), GetLastError() ) );
-		}
+			m_LibraryHandle = ::LoadLibrary(libraryPath.c_str());
+			if (m_LibraryHandle)
+			{
+				m_CreateObjectFunc = reinterpret_cast<CreateObjectFunc>(::GetProcAddress(m_LibraryHandle, "CreateObject"));
+				if (m_CreateObjectFunc)
+				{
+					return true;
+				}
+			}
 
-		m_CreateObjectFunc = reinterpret_cast<CreateObjectFunc>(GetProcAddress(m_LibraryHandle, "CreateObject"));
-		if (m_CreateObjectFunc == NULL)
-		{
 			Free();
-			return false;
-			//throw SevenZipException( _T( "Loaded library is missing required CreateObject function" ) );
 		}
-		return true;
+		return false;
 	}
-	void SevenZipLibrary::Free()
+	void Library::Free()
 	{
-		if (m_LibraryHandle != NULL)
+		if (m_LibraryHandle)
 		{
-			FreeLibrary(m_LibraryHandle);
-			m_LibraryHandle = NULL;
-			m_CreateObjectFunc = NULL;
+			::FreeLibrary(m_LibraryHandle);
+
+			m_LibraryHandle = nullptr;
+			m_CreateObjectFunc = nullptr;
 		}
 	}
 	
-	bool SevenZipLibrary::CreateObject(const GUID& clsID, const GUID& nInterfaceID, void** pOutObject) const
+	bool Library::CreateObject(const GUID& classID, const GUID& interfaceID, void** outObject) const
 	{
-		if (m_CreateObjectFunc == NULL)
+		if (m_CreateObjectFunc)
 		{
-			return false;
-			//throw SevenZipException( _T( "Library is not loaded" ) );
+			return SUCCEEDED(m_CreateObjectFunc(&classID, &interfaceID, outObject));
 		}
-
-		HRESULT nStatus = m_CreateObjectFunc(&clsID, &nInterfaceID, pOutObject);
-		if (FAILED(nStatus))
-		{
-			return false;
-			//throw SevenZipException( GetCOMErrMsg( _T( "CreateObject" ), hr ) );
-		}
-		return true;
+		return false;
 	}
 }

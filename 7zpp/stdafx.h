@@ -2,11 +2,13 @@
 #define NOMINMAX
 #define WIN32_LEAN_AND_MEAN
 
-#include "targetver.h"
+#include "TargetVer.h"
 #include <Windows.h>
 #include <atlbase.h>
 #include <vector>
+#include <array>
 #include <deque>
 #include <unordered_map>
 #include <algorithm>
+#include <optional>
 #include "SevenString.h"

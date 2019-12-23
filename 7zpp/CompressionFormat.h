@@ -21,13 +21,12 @@ namespace SevenZip
 			Lzma86
 		};
 
-		//typedef intl::EnumerationDefinitionNoStrings _Definition;
-		struct _Definition: public intl::EnumerationDefinition<_Enum, _Definition>
+		struct _Definition: public Internal::EnumerationDefinition<_Enum, _Definition>
 		{
 			static StringValue Strings[];
 		};
-		typedef intl::EnumerationValue< _Enum, _Definition, Unknown > _Value;
+		using _Value = Internal::EnumerationValue<_Enum, _Definition, Unknown>;
 	};
 
-	typedef CompressionFormat::_Value CompressionFormatEnum;
+	using CompressionFormatEnum = CompressionFormat::_Value;
 }

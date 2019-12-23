@@ -4,23 +4,23 @@
 
 namespace SevenZip
 {
-	class SevenZipLibrary
+	class Library
 	{
 		private:
-			typedef UINT32(WINAPI *CreateObjectFunc)(const GUID* clsID, const GUID* nInterfaceID, void** pOutObject);
+			using CreateObjectFunc = UINT32(WINAPI*)(const GUID* classID, const GUID* interfaceID, void** outObject);
 
 		private:
-			HMODULE m_LibraryHandle = NULL;
-			CreateObjectFunc m_CreateObjectFunc = NULL;
+			HMODULE m_LibraryHandle = nullptr;
+			CreateObjectFunc m_CreateObjectFunc = nullptr;
 
 		public:
-			SevenZipLibrary();
-			virtual ~SevenZipLibrary();
+			Library();
+			virtual ~Library();
 
 		public:
 			bool IsLoaded() const
 			{
-				return m_LibraryHandle != NULL && m_CreateObjectFunc != NULL;
+				return m_LibraryHandle != nullptr;
 			}
 			HMODULE GetHandle() const
 			{
@@ -31,6 +31,21 @@ namespace SevenZip
 			bool Load(const TString& libraryPath);
 			void Free();
 
-			bool CreateObject(const GUID& clsID, const GUID& nInterfaceID, void** pOutObject) const;
+			bool CreateObject(const GUID& classID, const GUID& interfaceID, void** outObject) const;
+
+			#ifdef SEVENZIPCPP_LIB
+			template<class T>
+			CComPtr<T> CreateObject(const GUID& classID, const GUID& interfaceID) const
+			{
+				static_assert(std::is_base_of_v<IUnknown, T>, "Must be COM class");
+
+				CComPtr<T> outObject;
+				if (CreateObject(classID, interfaceID, reinterpret_cast<void**>(&outObject)))
+				{
+					return outObject;
+				}
+				return nullptr;
+			}
+			#endif
 	};
 }
