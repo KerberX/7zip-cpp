@@ -1,6 +1,7 @@
 #pragma once
 #include <tchar.h>
 #include <string>
+#include <string_view>
 
 namespace SevenZip
 {

@@ -1,4 +1,6 @@
 #pragma once
+#include <utility>
+#include <atlbase.h>
 
 namespace SevenZip
 {

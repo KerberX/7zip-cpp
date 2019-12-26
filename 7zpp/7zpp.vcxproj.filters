@@ -11,13 +11,13 @@
       <Filter>Source files</Filter>
     </ClCompile>
     <ClCompile Include="ArchiveExtractCallback.cpp">
-      <Filter>Source files\Callbacks</Filter>
+      <Filter>Source files\Callback</Filter>
     </ClCompile>
     <ClCompile Include="ArchiveOpenCallback.cpp">
-      <Filter>Source files\Callbacks</Filter>
+      <Filter>Source files\Callback</Filter>
     </ClCompile>
     <ClCompile Include="ArchiveUpdateCallback.cpp">
-      <Filter>Source files\Callbacks</Filter>
+      <Filter>Source files\Callback</Filter>
     </ClCompile>
     <ClCompile Include="Utility.cpp">
       <Filter>Source files\Utility</Filter>
@@ -53,13 +53,13 @@
       <Filter>Header files</Filter>
     </ClInclude>
     <ClInclude Include="ArchiveExtractCallback.h">
-      <Filter>Header files\Callbacks</Filter>
+      <Filter>Header files\Callback</Filter>
     </ClInclude>
     <ClInclude Include="ArchiveOpenCallback.h">
-      <Filter>Header files\Callbacks</Filter>
+      <Filter>Header files\Callback</Filter>
     </ClInclude>
     <ClInclude Include="ArchiveUpdateCallback.h">
-      <Filter>Header files\Callbacks</Filter>
+      <Filter>Header files\Callback</Filter>
     </ClInclude>
     <ClInclude Include="Utility.h">
       <Filter>Header files\Utility</Filter>
@@ -121,6 +121,9 @@
     <ClInclude Include="FileSystem.h">
       <Filter>Header files\Utility</Filter>
     </ClInclude>
+    <ClInclude Include="COM.h">
+      <Filter>Header files\Utility</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Includes">
@@ -131,12 +134,6 @@
     </Filter>
     <Filter Include="Source files">
       <UniqueIdentifier>{a95ea252-a1de-4a69-8282-535be5202310}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Header files\Callbacks">
-      <UniqueIdentifier>{4ff54e0c-c235-473f-8d7f-268e02ec861a}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source files\Callbacks">
-      <UniqueIdentifier>{b9566556-712e-42ca-bea4-d3796b061ce6}</UniqueIdentifier>
     </Filter>
     <Filter Include="Header files\Enums">
       <UniqueIdentifier>{5667a8d7-1647-4890-8a47-0fe326c1ebc6}</UniqueIdentifier>
@@ -167,6 +164,12 @@
     </Filter>
     <Filter Include="Source files\Notifiers">
       <UniqueIdentifier>{df967fee-b360-4bee-994b-7ea1fedea0f4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header files\Callback">
+      <UniqueIdentifier>{4ff54e0c-c235-473f-8d7f-268e02ec861a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source files\Callback">
+      <UniqueIdentifier>{b9566556-712e-42ca-bea4-d3796b061ce6}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

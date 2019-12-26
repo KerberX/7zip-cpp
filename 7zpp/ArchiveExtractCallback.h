@@ -4,15 +4,20 @@
 #include <7zip/Archive/IArchive.h>
 #include <7zip/IPassword.h>
 #include "SevenZipArchive.h"
-#include "ProgressNotifier.h"
-//#include "7zip/Archive/IArchive.h"
+#include "COM.h"
 
 namespace SevenZip
 {
-	class ArchiveExtractCallback: public IArchiveExtractCallback, public ICryptoGetTextPassword
+	class ProgressNotifier;
+}
+
+namespace SevenZip::Callback
+{
+	class ExtractArchive: public IArchiveExtractCallback, public ICryptoGetTextPassword
 	{
 		protected:
-			long m_RefCount;
+			COM::RefCount<ExtractArchive> m_RefCount;
+
 			CComPtr<IInArchive> m_ArchiveHandler;
 			TString m_Directory;
 			TStringVector m_FinalPaths;
@@ -21,18 +26,18 @@ namespace SevenZip
 
 			TString m_RelativePath;
 			TString m_AbsolutePath;
-			bool m_IsDirectory;
+			bool m_IsDirectory = false;
 
 			bool m_HasAttributes;
-			UInt32 m_Attributes;
+			UInt32 m_Attributes = 0;
 
 			bool m_HasModificationTime;
-			FILETIME m_ModificationTime;
+			FILETIME m_ModificationTime = {};
 
 			bool m_HasNewFileSize;
-			UInt64 m_NewFileSize;
+			UInt64 m_NewFileSize = 0;
 
-			ProgressNotifier* m_Notifier;
+			ProgressNotifier* m_Notifier = nullptr;
 
 		protected:
 			void GetPropertyFilePath(UInt32 index);
@@ -45,16 +50,22 @@ namespace SevenZip
 			void EmitFileDoneCallback(const TString& path);
 
 		protected:
-			HRESULT RetrieveAllProperties(UInt32 index, Int32 askExtractMode, bool* pContinue);
+			HRESULT RetrieveAllProperties(UInt32 index, Int32 askExtractMode, bool* shouldContinue);
 
 		public:
-			ArchiveExtractCallback(const CComPtr<IInArchive>& archiveHandler, const TString& directory, ProgressNotifier* notifier = nullptr);
-			virtual ~ArchiveExtractCallback();
+			ExtractArchive(const CComPtr<IInArchive>& archiveHandler, const TString& directory, ProgressNotifier* notifier = nullptr);
+			~ExtractArchive() = default;
 
 		public:
+			STDMETHOD_(ULONG, AddRef)() override
+			{
+				return m_RefCount.AddRef();
+			}
+			STDMETHOD_(ULONG, Release)() override
+			{
+				return m_RefCount.Release();
+			}
 			STDMETHOD(QueryInterface)(REFIID iid, void** ppvObject) override;
-			STDMETHOD_(ULONG, AddRef)() override;
-			STDMETHOD_(ULONG, Release)() override;
 
 			// IProgress
 			STDMETHOD(SetTotal)(UInt64 size) override;
@@ -76,16 +87,16 @@ namespace SevenZip
 	};
 }
 
-namespace SevenZip
+namespace SevenZip::Callback
 {
-	class ArchiveExtractCallbackMemory: public ArchiveExtractCallback
+	class ExtractArchiveToBuffer: public ExtractArchive
 	{
 		private:
 			SevenZip::DataBufferMap& m_BufferMap;
 
 		public:
-			ArchiveExtractCallbackMemory(const CComPtr<IInArchive>& archiveHandler, SevenZip::DataBufferMap& bufferMap, ProgressNotifier* notifier);
-			virtual ~ArchiveExtractCallbackMemory();
+			ExtractArchiveToBuffer(const CComPtr<IInArchive>& archiveHandler, SevenZip::DataBufferMap& bufferMap, ProgressNotifier* notifier = nullptr);
+			~ExtractArchiveToBuffer() = default;
 
 		public:
 			// IProgress

@@ -1,9 +1,13 @@
 #pragma once
+#include <vector>
 
 namespace SevenZip
 {
 	struct FileInfo
 	{
+		using Vector = std::vector<FileInfo>;
+		using RefVector = std::vector<FileInfo*>;
+
 		TString	FileName;
 		FILETIME LastWriteTime = {};
 		FILETIME CreationTime = {};
@@ -14,6 +18,9 @@ namespace SevenZip
 	};
 	struct FilePathInfo: public FileInfo
 	{
+		using Vector = std::vector<FilePathInfo>;
+		using RefVector = std::vector<FilePathInfo*>;
+
 		TString	FilePath;
 	};
 }

@@ -4,17 +4,17 @@
 #include "ArchiveOpenCallback.h"
 #include "ProgressNotifier.h"
 
-namespace SevenZip
+namespace SevenZip::Callback
 {
-	ArchiveOpenCallback::ArchiveOpenCallback(ProgressNotifier* notifier)
-		:m_Notifier(notifier)
+	OpenArchive::OpenArchive(ProgressNotifier* notifier)
+		:m_RefCount(*this), m_Notifier(notifier)
 	{
 	}
-	ArchiveOpenCallback::~ArchiveOpenCallback()
+	OpenArchive::~OpenArchive()
 	{
 	}
 
-	STDMETHODIMP ArchiveOpenCallback::QueryInterface(REFIID iid, void** ppvObject)
+	STDMETHODIMP OpenArchive::QueryInterface(REFIID iid, void** ppvObject)
 	{
 		if (iid == __uuidof(IUnknown))
 		{
@@ -39,21 +39,8 @@ namespace SevenZip
 
 		return E_NOINTERFACE;
 	}
-	STDMETHODIMP_(ULONG) ArchiveOpenCallback::AddRef()
-	{
-		return static_cast<ULONG>(InterlockedIncrement(&m_RefCount));
-	}
-	STDMETHODIMP_(ULONG) ArchiveOpenCallback::Release()
-	{
-		ULONG res = static_cast<ULONG>(InterlockedDecrement(&m_RefCount));
-		if (res == 0)
-		{
-			delete this;
-		}
-		return res;
-	}
 
-	STDMETHODIMP ArchiveOpenCallback::SetTotal(const UInt64* files, const UInt64* bytes)
+	STDMETHODIMP OpenArchive::SetTotal(const UInt64* files, const UInt64* bytes)
 	{
 		if (bytes)
 		{
@@ -61,7 +48,7 @@ namespace SevenZip
 		}
 		return S_OK;
 	}
-	STDMETHODIMP ArchiveOpenCallback::SetCompleted(const UInt64* files, const UInt64* bytes)
+	STDMETHODIMP OpenArchive::SetCompleted(const UInt64* files, const UInt64* bytes)
 	{
 		if (m_Notifier)
 		{
@@ -73,7 +60,7 @@ namespace SevenZip
 		}
 		return S_OK;
 	}
-	STDMETHODIMP ArchiveOpenCallback::CryptoGetTextPassword(BSTR* password)
+	STDMETHODIMP OpenArchive::CryptoGetTextPassword(BSTR* password)
 	{
 		// TODO: support passwords
 		return E_ABORT;

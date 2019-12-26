@@ -4,31 +4,43 @@
 #include <7zip/Archive/IArchive.h>
 #include <7zip/ICoder.h>
 #include <7zip/IPassword.h>
-#include <vector>
 #include "FileInfo.h"
-#include "ProgressNotifier.h"
+#include "COM.h"
 
 namespace SevenZip
 {
-	class ArchiveUpdateCallback: public IArchiveUpdateCallback, public ICryptoGetTextPassword2, public ICompressProgressInfo
+	class ProgressNotifier;
+}
+
+namespace SevenZip::Callback
+{
+	class UpdateArchive: public IArchiveUpdateCallback, public ICryptoGetTextPassword2, public ICompressProgressInfo
 	{
 		private:
-			long m_RefCount = 0;
+			COM::RefCount<UpdateArchive> m_RefCount;
+
 			TString m_DirectoryPrefix;
 			TString m_OutputPath;
 			size_t m_ExistingItemsCount = 0;
 			const std::vector<TString>& m_ArchiveRelativeFilePaths;
 			const std::vector<FilePathInfo>& m_FilePaths;
+
 			ProgressNotifier* m_ProgressNotifier = nullptr;
 
 		public:
-			ArchiveUpdateCallback(const TString& dirPrefix, const std::vector<FilePathInfo>& filePaths, const std::vector<TString>& inArchiveFilePaths, const TString& outputFilePath, ProgressNotifier* notifier = nullptr);
-			virtual ~ArchiveUpdateCallback();
+			UpdateArchive(const TString& dirPrefix, const std::vector<FilePathInfo>& filePaths, const std::vector<TString>& inArchiveFilePaths, const TString& outputFilePath, ProgressNotifier* notifier = nullptr);
+			~UpdateArchive();
 
 		public:
+			STDMETHOD_(ULONG, AddRef)() override
+			{
+				return m_RefCount.AddRef();
+			}
+			STDMETHOD_(ULONG, Release)() override
+			{
+				return m_RefCount.Release();
+			}
 			STDMETHOD(QueryInterface)(REFIID iid, void** ppvObject);
-			STDMETHOD_(ULONG, AddRef)();
-			STDMETHOD_(ULONG, Release)();
 
 			// IProgress
 			STDMETHOD(SetTotal)(UInt64 size);
@@ -47,9 +59,9 @@ namespace SevenZip
 			STDMETHOD(SetRatioInfo)(const UInt64* inSize, const UInt64* outSize);
 
 		public:
-			void SetExistingItemsCount(size_t nExistingItemsCount)
+			void SetExistingItemsCount(size_t existingItemsCount)
 			{
-				m_ExistingItemsCount = nExistingItemsCount;
+				m_ExistingItemsCount = existingItemsCount;
 			}
 	};
 }

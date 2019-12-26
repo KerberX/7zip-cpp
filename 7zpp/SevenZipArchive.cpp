@@ -33,7 +33,7 @@ namespace SevenZip
 	bool Archive::DetectCompressionFormatHelper(CompressionFormatEnum& format)
 	{
 		m_OverrideCompressionFormat = false;
-		return Utility::DetectCompressionFormat(m_LibraryInstance, m_ArchiveFilePath, format, m_Notifier);
+		return Utility::DetectCompressionFormat(m_Library, m_ArchiveFilePath, format, m_Notifier);
 	}
 	bool Archive::ReadInArchiveMetadataHelper()
 	{
@@ -48,25 +48,25 @@ namespace SevenZip
 	}
 	bool Archive::InitNumberOfItems()
 	{
-		return Utility::GetNumberOfItems(m_LibraryInstance, m_ArchiveFilePath, m_Property_CompressionFormat, m_ItemCount, m_Notifier);
+		return Utility::GetNumberOfItems(m_Library, m_ArchiveFilePath, m_Property_CompressionFormat, m_ItemCount, m_Notifier);
 	}
 	bool Archive::InitItemsNames()
 	{
-		return Utility::GetItemsNames(m_LibraryInstance, m_ArchiveFilePath, m_Property_CompressionFormat, m_ItemCount, m_ItemNames, m_ItemOriginalSizes, m_Notifier);
+		return Utility::GetItemsNames(m_Library, m_ArchiveFilePath, m_Property_CompressionFormat, m_ItemCount, m_ItemNames, m_ItemOriginalSizes, m_Notifier);
 	}
 
 	// Extraction
-	bool Archive::ExtractToDisk(const TString& destDirectory, const IndexesVector* filesIndices, const TStringVector& finalPaths, ProgressNotifier* notifier) const
+	bool Archive::ExtractToDisk(const TString& destDirectory, const IndexVector* filesIndices, const TStringVector& finalPaths, ProgressNotifier* notifier) const
 	{
 		if (auto fileStream = FileSystem::OpenFileToRead(m_ArchiveFilePath))
 		{
-			auto archive = Utility::GetArchiveReader(m_LibraryInstance, m_Property_CompressionFormat);
+			auto archive = Utility::GetArchiveReader(m_Library, m_Property_CompressionFormat);
 			auto inFile = CreateObject<InStreamWrapper>(fileStream);
-			auto openCallback = CreateObject<ArchiveOpenCallback>();
+			auto openCallback = CreateObject<Callback::OpenArchive>();
 
 			if (SUCCEEDED(archive->Open(inFile, 0, openCallback)))
 			{
-				auto extractCallback = CreateObject<ArchiveExtractCallback>(archive, destDirectory, notifier);
+				auto extractCallback = CreateObject<Callback::ExtractArchive>(archive, destDirectory, notifier);
 				extractCallback->SetFinalPath(finalPaths);
 
 				const uint32_t* indiencesData = filesIndices ? filesIndices->data() : nullptr;
@@ -85,10 +85,10 @@ namespace SevenZip
 		}
 		return false;
 	}
-	IndexesVector Archive::RemoveInvalidIndexes(const IndexesVector& sourceArray) const
+	IndexVector Archive::RemoveInvalidIndexes(const IndexVector& sourceArray) const
 	{
-		IndexesVector newArray = sourceArray;
-		newArray.erase(std::remove(newArray.begin(), newArray.end(), (IndexesVector::value_type)-1), newArray.end());
+		IndexVector newArray = sourceArray;
+		newArray.erase(std::remove(newArray.begin(), newArray.end(), std::numeric_limits<IndexVector::value_type>::max()), newArray.end());
 		return newArray;
 	}
 
@@ -175,7 +175,7 @@ namespace SevenZip
 			return false;
 		}
 
-		FilePathInfoVector files = FileSystem::GetFilesInDirectory(directory, searchPattern.empty() ? AllFilesPattern : searchPattern, recursion);
+		FilePathInfo::Vector files = FileSystem::GetFilesInDirectory(directory, searchPattern.empty() ? AllFilesPattern : searchPattern, recursion);
 		TStringVector relativePaths(files.size(), TString());
 		
 		for (size_t i = 0; i < files.size(); i++)
@@ -184,13 +184,13 @@ namespace SevenZip
 		}
 		return CompressFilesToArchive(pathPrefix, files, relativePaths, notifier);
 	}
-	bool Archive::CompressFilesToArchive(const TString& pathPrefix, const FilePathInfoVector& filePaths, const TStringVector& inArchiveFilePaths, ProgressNotifier* notifier)
+	bool Archive::CompressFilesToArchive(const TString& pathPrefix, const FilePathInfo::Vector& filePaths, const TStringVector& inArchiveFilePaths, ProgressNotifier* notifier)
 	{
-		auto archiveWriter = Utility::GetArchiveWriter(m_LibraryInstance, m_Property_CompressionFormat);
+		auto archiveWriter = Utility::GetArchiveWriter(m_Library, m_Property_CompressionFormat);
 		SetCompressionProperties(archiveWriter);
 
 		auto outFile = CreateObject<OutStreamWrapper>(FileSystem::OpenFileToWrite(m_ArchiveFilePath));
-		auto updateCallback = CreateObject<ArchiveUpdateCallback>(pathPrefix, filePaths, inArchiveFilePaths, m_ArchiveFilePath, notifier);
+		auto updateCallback = CreateObject<Callback::UpdateArchive>(pathPrefix, filePaths, inArchiveFilePaths, m_ArchiveFilePath, notifier);
 		updateCallback->SetExistingItemsCount(m_ItemCount);
 
 		if (SUCCEEDED(archiveWriter->UpdateItems(outFile, (UInt32)filePaths.size(), updateCallback)))
@@ -207,7 +207,7 @@ namespace SevenZip
 	//////////////////////////////////////////////////////////////////////////
 	// Constructor and destructor
 	Archive::Archive(const Library& library, const TString& archivePath, ProgressNotifier* notifier)
-		:m_LibraryInstance(library),
+		:m_Library(library),
 		m_Notifier(notifier),
 		m_ArchiveFilePath(archivePath),
 		m_Property_CompressionFormat(CompressionFormat::Unknown),
@@ -272,9 +272,9 @@ namespace SevenZip
 	{
 		if (auto fileStream = FileSystem::OpenFileToRead(m_ArchiveFilePath))
 		{
-			auto archive = Utility::GetArchiveReader(m_LibraryInstance, m_Property_CompressionFormat);
+			auto archive = Utility::GetArchiveReader(m_Library, m_Property_CompressionFormat);
 			auto inFile = CreateObject<InStreamWrapper>(fileStream);
-			auto openCallback = CreateObject<ArchiveOpenCallback>();
+			auto openCallback = CreateObject<Callback::OpenArchive>();
 
 			if (SUCCEEDED(archive->Open(inFile, nullptr, openCallback)))
 			{
@@ -326,25 +326,25 @@ namespace SevenZip
 	{
 		return ExtractToDisk(destDirectory, nullptr, TStringVector(), notifier);
 	}
-	bool Archive::ExtractArchive(const IndexesVector& filesIndices, const TString& destDirectory, ProgressNotifier* notifier) const
+	bool Archive::ExtractArchive(const IndexVector& filesIndices, const TString& destDirectory, ProgressNotifier* notifier) const
 	{
 		return ExtractToDisk(destDirectory, &filesIndices, TStringVector(), notifier);
 	}
-	bool Archive::ExtractArchive(const IndexesVector& filesIndices, const TStringVector& finalPaths, ProgressNotifier* notifier) const
+	bool Archive::ExtractArchive(const IndexVector& filesIndices, const TStringVector& finalPaths, ProgressNotifier* notifier) const
 	{
 		return ExtractToDisk(TString(), &filesIndices, finalPaths, notifier);
 	}
-	bool Archive::ExtractToMemory(const IndexesVector& filesIndices, DataBufferMap& bufferMap, ProgressNotifier* notifier) const
+	bool Archive::ExtractToMemory(const IndexVector& filesIndices, DataBufferMap& bufferMap, ProgressNotifier* notifier) const
 	{
 		if (auto fileStream = FileSystem::OpenFileToRead(m_ArchiveFilePath))
 		{
-			auto archive = Utility::GetArchiveReader(m_LibraryInstance, m_Property_CompressionFormat);
+			auto archive = Utility::GetArchiveReader(m_Library, m_Property_CompressionFormat);
 			auto inFile = CreateObject<InStreamWrapper>(fileStream, notifier);
-			auto openCallback = CreateObject<ArchiveOpenCallback>();
+			auto openCallback = CreateObject<Callback::OpenArchive>();
 
 			if (SUCCEEDED(archive->Open(inFile, nullptr, openCallback)))
 			{
-				IndexesVector newIndexes = RemoveInvalidIndexes(filesIndices);
+				IndexVector newIndexes = RemoveInvalidIndexes(filesIndices);
 				for (uint32_t index: newIndexes)
 				{
 					if (index < m_ItemOriginalSizes.size())
@@ -354,7 +354,7 @@ namespace SevenZip
 					}
 				}
 
-				auto extractCallback = CreateObject<ArchiveExtractCallbackMemory>(archive, bufferMap, notifier);
+				auto extractCallback = CreateObject<Callback::ExtractArchiveToBuffer>(archive, bufferMap, notifier);
 				if (SUCCEEDED(archive->Extract(newIndexes.data(), (UInt32)newIndexes.size(), false, extractCallback)))
 				{
 					archive->Close();
@@ -389,11 +389,11 @@ namespace SevenZip
 	}
 	bool Archive::CompressSpecifiedFiles(const TStringVector& sourceFiles, const TStringVector& archivePaths, ProgressNotifier* notifier)
 	{
-		FilePathInfoVector files;
+		FilePathInfo::Vector files;
 		files.resize(sourceFiles.size());
 		for (size_t i = 0; i < sourceFiles.size(); i++)
 		{
-			FilePathInfoVector infoArray = FileSystem::GetFile(sourceFiles[i]);
+			FilePathInfo::Vector infoArray = FileSystem::GetFile(sourceFiles[i]);
 			if (!infoArray.empty())
 			{
 				files[i] = infoArray.front();
@@ -404,7 +404,7 @@ namespace SevenZip
 	}
 	bool Archive::CompressFile(const TString& filePath, ProgressNotifier* notifier)
 	{
-		FilePathInfoVector files = FileSystem::GetFile(filePath);
+		FilePathInfo::Vector files = FileSystem::GetFile(filePath);
 		if (!files.empty())
 		{
 			return CompressFilesToArchive(FileSystem::GetPath(filePath), files, {TString()}, notifier);
@@ -413,7 +413,7 @@ namespace SevenZip
 	}
 	bool Archive::CompressFile(const TString& filePath, const TString& archivePath, ProgressNotifier* notifier)
 	{
-		FilePathInfoVector files = FileSystem::GetFile(filePath);
+		FilePathInfo::Vector files = FileSystem::GetFile(filePath);
 		if (!files.empty())
 		{
 			return CompressFilesToArchive(FileSystem::GetPath(filePath), files, {archivePath}, notifier);

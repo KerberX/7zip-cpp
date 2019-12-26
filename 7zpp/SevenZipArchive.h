@@ -10,8 +10,7 @@ namespace SevenZip
 	class ListingNotifier;
 
 	using TStringVector = std::vector<TString>;
-	using IndexesVector = std::vector<uint32_t>;
-	using FilePathInfoVector = std::vector<FilePathInfo>;
+	using IndexVector = std::vector<uint32_t>;
 	using DataBuffer = std::vector<uint8_t>;
 	using DataBufferMap = std::unordered_map<size_t, DataBuffer>;
 
@@ -31,7 +30,7 @@ namespace SevenZip
 	class Archive
 	{
 		protected:
-			const Library& m_LibraryInstance;
+			const Library& m_Library;
 			ProgressNotifier* m_Notifier = nullptr;
 			TString m_ArchiveFilePath;
 
@@ -59,15 +58,15 @@ namespace SevenZip
 			bool ReadInArchiveMetadataHelper();
 
 			// Extraction
-			bool ExtractToDisk(const TString& directory, const IndexesVector* filesIndices = nullptr, const TStringVector& finalPaths = TStringVector(), ProgressNotifier* notifier = nullptr) const;
-			IndexesVector RemoveInvalidIndexes(const IndexesVector& tSourceArray) const;
+			bool ExtractToDisk(const TString& directory, const IndexVector* filesIndices = nullptr, const TStringVector& finalPaths = TStringVector(), ProgressNotifier* notifier = nullptr) const;
+			IndexVector RemoveInvalidIndexes(const IndexVector& sourceArray) const;
 
 			// Compression
 			const char* GetMethodString() const;
 			std::string FormatMethodString() const;
 			bool SetCompressionProperties(IUnknown* pArchive);
 			bool FindAndCompressFiles(const TString& directory, const TString& searchPattern, const TString& pathPrefix, bool recursion, ProgressNotifier* notifier);
-			bool CompressFilesToArchive(const TString& pathPrefix, const FilePathInfoVector& filePaths, const TStringVector& inArchiveFilePaths, ProgressNotifier* notifier);
+			bool CompressFilesToArchive(const TString& pathPrefix, const FilePathInfo::Vector& filePaths, const TStringVector& inArchiveFilePaths, ProgressNotifier* notifier);
 
 		public:
 			Archive(const Library& library, const TString& archivePath, ProgressNotifier* notifier = nullptr);
@@ -138,13 +137,13 @@ namespace SevenZip
 			virtual bool ExtractArchive(const TString& directory, ProgressNotifier* notifier = nullptr) const;
 			
 			// Extract only specified files into directory
-			virtual bool ExtractArchive(const IndexesVector& filesIndices, const TString& destDirectory, ProgressNotifier* notifier = nullptr) const;
+			virtual bool ExtractArchive(const IndexVector& filesIndices, const TString& destDirectory, ProgressNotifier* notifier = nullptr) const;
 
 			// Extract only specified files into corresponding files path
-			virtual bool ExtractArchive(const IndexesVector& filesIndices, const TStringVector& finalPaths, ProgressNotifier* notifier = nullptr) const;
+			virtual bool ExtractArchive(const IndexVector& filesIndices, const TStringVector& finalPaths, ProgressNotifier* notifier = nullptr) const;
 			
 			// Extract specified file into memory buffer
-			virtual bool ExtractToMemory(const IndexesVector& filesIndices, DataBufferMap& bufferMap, ProgressNotifier* notifier = nullptr) const;
+			virtual bool ExtractToMemory(const IndexVector& filesIndices, DataBufferMap& bufferMap, ProgressNotifier* notifier = nullptr) const;
 			virtual bool ExtractToMemory(uint32_t index, DataBuffer& buffer, ProgressNotifier* notifier = nullptr) const;
 	
 			/* Compression */

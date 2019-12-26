@@ -10,5 +10,8 @@
 #include <deque>
 #include <unordered_map>
 #include <algorithm>
+#include <string>
+#include <string_view>
 #include <optional>
+#include <cstdint>
 #include "SevenString.h"

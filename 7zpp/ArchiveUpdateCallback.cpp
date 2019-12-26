@@ -5,19 +5,20 @@
 #include "VariantProperty.h"
 #include "FileSystem.h"
 #include "InStreamWrapper.h"
+#include "ProgressNotifier.h"
+#include "Common.h"
 
-
-namespace SevenZip
+namespace SevenZip::Callback
 {
-	ArchiveUpdateCallback::ArchiveUpdateCallback(const TString& dirPrefix, const std::vector<FilePathInfo>& filePaths, const std::vector<TString>& inArchiveFilePaths, const TString& outputFilePath, ProgressNotifier* callback)
-		:m_DirectoryPrefix(dirPrefix), m_FilePaths(filePaths), m_ArchiveRelativeFilePaths(inArchiveFilePaths), m_OutputPath(outputFilePath), m_ProgressNotifier(callback)
+	UpdateArchive::UpdateArchive(const TString& dirPrefix, const std::vector<FilePathInfo>& filePaths, const std::vector<TString>& inArchiveFilePaths, const TString& outputFilePath, ProgressNotifier* callback)
+		:m_RefCount(*this), m_DirectoryPrefix(dirPrefix), m_FilePaths(filePaths), m_ArchiveRelativeFilePaths(inArchiveFilePaths), m_OutputPath(outputFilePath), m_ProgressNotifier(callback)
 	{
 	}
-	ArchiveUpdateCallback::~ArchiveUpdateCallback()
+	UpdateArchive::~UpdateArchive()
 	{
 	}
 
-	STDMETHODIMP ArchiveUpdateCallback::QueryInterface(REFIID iid, void** ppvObject)
+	STDMETHODIMP UpdateArchive::QueryInterface(REFIID iid, void** ppvObject)
 	{
 		if (iid == __uuidof(IUnknown))
 		{
@@ -49,21 +50,8 @@ namespace SevenZip
 
 		return E_NOINTERFACE;
 	}
-	STDMETHODIMP_(ULONG) ArchiveUpdateCallback::AddRef()
-	{
-		return static_cast<ULONG>(InterlockedIncrement(&m_RefCount));
-	}
-	STDMETHODIMP_(ULONG) ArchiveUpdateCallback::Release()
-	{
-		ULONG res = static_cast<ULONG>(InterlockedDecrement(&m_RefCount));
-		if (res == 0)
-		{
-			delete this;
-		}
-		return res;
-	}
 
-	STDMETHODIMP ArchiveUpdateCallback::SetTotal(UInt64 size)
+	STDMETHODIMP UpdateArchive::SetTotal(UInt64 size)
 	{
 		if (m_ProgressNotifier)
 		{
@@ -71,7 +59,7 @@ namespace SevenZip
 		}
 		return S_OK;
 	}
-	STDMETHODIMP ArchiveUpdateCallback::SetCompleted(const UInt64* completeValue)
+	STDMETHODIMP UpdateArchive::SetCompleted(const UInt64* completeValue)
 	{
 		if (m_ProgressNotifier)
 		{
@@ -84,21 +72,20 @@ namespace SevenZip
 		return S_OK;
 	}
 
-	STDMETHODIMP ArchiveUpdateCallback::GetUpdateItemInfo(UInt32 index, Int32* newData, Int32* newProperties, UInt32* indexInArchive)
+	STDMETHODIMP UpdateArchive::GetUpdateItemInfo(UInt32 index, Int32* newData, Int32* newProperties, UInt32* indexInArchive)
 	{
 		// Setting info for Create mode (vs. Append mode).
 		// TODO: support append mode
-		if (newData != nullptr)
+
+		if (newData)
 		{
 			*newData = 1;
 		}
-
-		if (newProperties != nullptr)
+		if (newProperties)
 		{
 			*newProperties = 1;
 		}
-
-		if (indexInArchive != nullptr)
+		if (indexInArchive)
 		{
 			*indexInArchive = std::numeric_limits<UInt32>::max();
 		}
@@ -114,15 +101,18 @@ namespace SevenZip
 
 		return S_OK;
 	}
-	STDMETHODIMP ArchiveUpdateCallback::GetProperty(UInt32 index, PROPID propID, PROPVARIANT* value)
+	STDMETHODIMP UpdateArchive::GetProperty(UInt32 index, PROPID propID, PROPVARIANT* value)
 	{
 		VariantProperty prop;
 
 		if (propID == kpidIsAnti)
 		{
 			prop = false;
-			prop.Detach(value);
-			return S_OK;
+			if (value)
+			{
+				return prop.Detach(*value);
+			}
+			return E_INVALIDARG;
 		}
 
 		if (index >= m_FilePaths.size())
@@ -136,21 +126,47 @@ namespace SevenZip
 			case kpidPath:
 			{
 				prop = m_ArchiveRelativeFilePaths[index].c_str();
-				//prop = FileSys::ExtractRelativePath(m_DirectoryPrefix, fileInfo.FilePath).c_str();
 				break;
 			}
-			case kpidIsDir:		prop = fileInfo.IsDirectory; break;
-			case kpidSize:		prop = fileInfo.Size; break;
-			case kpidAttrib:	prop = fileInfo.Attributes; break;
-			case kpidCTime:		prop = fileInfo.CreationTime; break;
-			case kpidATime:		prop = fileInfo.LastAccessTime; break;
-			case kpidMTime:		prop = fileInfo.LastWriteTime; break;
-		}
+			case kpidIsDir:
+			{
+				prop = fileInfo.IsDirectory;
+				break;
+			}
+			case kpidSize:
+			{
+				prop = fileInfo.Size;
+				break;
+			}
+			case kpidAttrib:
+			{
+				prop = fileInfo.Attributes;
+				break;
+			}
+			case kpidCTime:
+			{
+				prop = fileInfo.CreationTime;
+				break;
+			}
+			case kpidATime:
+			{
+				prop = fileInfo.LastAccessTime;
+				break;
+			}
+			case kpidMTime:
+			{
+				prop = fileInfo.LastWriteTime;
+				break;
+			}
+		};
 
-		prop.Detach(value);
-		return S_OK;
+		if (value)
+		{
+			return prop.Detach(*value);
+		}
+		return E_INVALIDARG;
 	}
-	STDMETHODIMP ArchiveUpdateCallback::GetStream(UInt32 index, ISequentialInStream** inStream)
+	STDMETHODIMP UpdateArchive::GetStream(UInt32 index, ISequentialInStream** inStream)
 	{
 		if (index >= m_FilePaths.size())
 		{
@@ -163,33 +179,33 @@ namespace SevenZip
 			return S_OK;
 		}
 
-		CComPtr<IStream> fileStream = FileSystem::OpenFileToRead(fileInfo.FilePath);
-		if (fileStream == nullptr)
+		auto fileStream = FileSystem::OpenFileToRead(fileInfo.FilePath);
+		if (!fileStream)
 		{
-			return HRESULT_FROM_WIN32(GetLastError());
+			return HRESULT_FROM_WIN32(::GetLastError());
 		}
 
-		CComPtr<InStreamWrapper> wrapperStream = new InStreamWrapper(fileStream, m_ProgressNotifier);
+		auto wrapperStream = CreateObject<InStreamWrapper>(fileStream, m_ProgressNotifier);
 		wrapperStream->SetFilePath(fileInfo.FilePath);
 		wrapperStream->SetStreamSize(fileInfo.Size);
 		*inStream = wrapperStream.Detach();
 
 		return S_OK;
 	}
-	STDMETHODIMP ArchiveUpdateCallback::SetOperationResult(Int32 operationResult)
+	STDMETHODIMP UpdateArchive::SetOperationResult(Int32 operationResult)
 	{
 		return S_OK;
 	}
 
-	STDMETHODIMP ArchiveUpdateCallback::CryptoGetTextPassword2(Int32* passwordIsDefined, BSTR* password)
+	STDMETHODIMP UpdateArchive::CryptoGetTextPassword2(Int32* passwordIsDefined, BSTR* password)
 	{
 		// TODO: support passwords
 		*passwordIsDefined = 0;
-		*password = SysAllocString(L"");
-		return *password != 0 ? S_OK : E_OUTOFMEMORY;
+		*password = ::SysAllocString(L"");
+		return *password != _T('\0') ? S_OK : E_OUTOFMEMORY;
 	}
 
-	STDMETHODIMP ArchiveUpdateCallback::SetRatioInfo(const UInt64* inSize, const UInt64* outSize)
+	STDMETHODIMP UpdateArchive::SetRatioInfo(const UInt64* inSize, const UInt64* outSize)
 	{
 		return S_OK;
 	}

@@ -386,6 +386,7 @@
     <ClInclude Include="Common.h" />
     <ClInclude Include="CompressionFormat.h" />
     <ClInclude Include="CompressionLevel.h" />
+    <ClInclude Include="COM.h" />
     <ClInclude Include="Enum.h" />
     <ClInclude Include="FileInfo.h" />
     <ClInclude Include="FileSystem.h" />

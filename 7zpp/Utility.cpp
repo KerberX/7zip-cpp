@@ -97,7 +97,7 @@ namespace SevenZip::Utility
 
 		auto archive = Utility::GetArchiveReader(library, format);
 		auto inFile = CreateObject<InStreamWrapper>(fileStream, notifier);
-		auto openCallback = CreateObject<ArchiveOpenCallback>(notifier);
+		auto openCallback = CreateObject<Callback::OpenArchive>(notifier);
 
 		HRESULT hr = archive->Open(inFile, nullptr, openCallback);
 		if (hr != S_OK)
@@ -131,7 +131,7 @@ namespace SevenZip::Utility
 
 		auto archive = Utility::GetArchiveReader(library, format);
 		auto inFile = CreateObject<InStreamWrapper>(fileStream, notifier);
-		auto openCallback = CreateObject<ArchiveOpenCallback>(notifier);
+		auto openCallback = CreateObject<Callback::OpenArchive>(notifier);
 
 		HRESULT hr = archive->Open(inFile, nullptr, openCallback);
 		if (hr != S_OK)
@@ -252,7 +252,7 @@ namespace SevenZip::Utility
 			archiveCompressionFormat = availableFormats[i];
 			auto archive = Utility::GetArchiveReader(library, archiveCompressionFormat);
 			auto inFile = CreateObject<InStreamWrapper>(fileStream, notifier);
-			auto openCallback = CreateObject<ArchiveOpenCallback>(notifier);
+			auto openCallback = CreateObject<Callback::OpenArchive>(notifier);
 
 			HRESULT hr = archive->Open(inFile, nullptr, openCallback);
 			archive->Close();
@@ -385,4 +385,3 @@ namespace SevenZip::Utility
 		return CompressionFormat::Unknown;
 	}
 }
-
