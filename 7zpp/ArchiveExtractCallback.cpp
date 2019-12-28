@@ -17,39 +17,88 @@ namespace
 
 namespace SevenZip::Callback
 {
-	void ExtractArchive::GetPropertyFilePath(UInt32 index)
+	TString Extractor::GetPropertyFilePath(uint32_t fileIndex) const
 	{
-		VariantProperty prop;
-		HRESULT hr = m_ArchiveHandler->GetProperty(index, kpidPath, &prop);
-		if (hr != S_OK)
+		VariantProperty property;
+		HRESULT hr = m_Archive->GetProperty(fileIndex, kpidPath, &property);
+		if (FAILED(hr))
 		{
 			_com_issue_error(hr);
 		}
 
-		if (prop.vt == VT_EMPTY)
+		if (property.vt == VT_EMPTY)
 		{
-			m_RelativePath = EmptyFileAlias;
+			return String::Format(_T("%s %u"), EmptyFileAlias, fileIndex);
 		}
-		else if (prop.vt != VT_BSTR)
+		else if (property.vt != VT_BSTR)
 		{
 			_com_issue_error(E_FAIL);
 		}
 		else
 		{
-			_bstr_t bstr = prop.bstrVal;
+			_bstr_t bstr = property.bstrVal;
 			#ifdef _UNICODE
-			m_RelativePath = bstr;
+			return TString(bstr.GetBSTR(), bstr.length());
 			#else
-			char relPath[MAX_PATH];
-			int size = WideCharToMultiByte(CP_UTF8, 0, bstr, bstr.length(), relPath, MAX_PATH, nullptr, nullptr);
-			m_RelativePath.assign(relPath, size);
+			return ToUTF8(bstr, bstr.length());
 			#endif
 		}
+		return {};
 	}
-	void ExtractArchive::GetPropertyAttributes(UInt32 index)
+	std::optional<int64_t> Extractor::GetPropertyFileSize(uint32_t fileIndex) const
+	{
+		VariantProperty property;
+		if (SUCCEEDED(m_Archive->GetProperty(fileIndex, kpidSize, &property)))
+		{
+			return property.ToInteger<int64_t>();
+		}
+		return std::nullopt;
+	}
+	std::optional<int64_t> Extractor::GetPropertyCompressedFileSize(uint32_t fileIndex) const
+	{
+		VariantProperty property;
+		if (SUCCEEDED(m_Archive->GetProperty(fileIndex, kpidPackSize, &property)))
+		{
+			return property.ToInteger<int64_t>();
+		}
+		return std::nullopt;
+	}
+	std::optional<uint32_t> Extractor::GetPropertyAttributes(uint32_t fileIndex) const
+	{
+		VariantProperty property;
+		if (SUCCEEDED(m_Archive->GetProperty(fileIndex, kpidAttrib, &property)))
+		{
+			return property.ToInteger<int32_t>();
+		}
+		return std::nullopt;
+	}
+	std::optional<FILETIME> Extractor::GetPropertyModifiedTime(uint32_t fileIndex) const
 	{
 		VariantProperty prop;
-		HRESULT hr = m_ArchiveHandler->GetProperty(index, kpidAttrib, &prop);
+		HRESULT hr = m_Archive->GetProperty(fileIndex, kpidMTime, &prop);
+		if (FAILED(hr))
+		{
+			_com_issue_error(hr);
+		}
+
+		if (prop.vt == VT_EMPTY)
+		{
+			return std::nullopt;
+		}
+		else if (prop.vt == VT_FILETIME)
+		{
+			return prop.filetime;
+		}
+		else
+		{
+			_com_issue_error(E_FAIL);
+		}
+		return std::nullopt;
+	}
+	bool Extractor::GetPropertyIsDirectory(uint32_t fileIndex) const
+	{
+		VariantProperty prop;
+		HRESULT hr = m_Archive->GetProperty(fileIndex, kpidIsDir, &prop);
 		if (hr != S_OK)
 		{
 			_com_issue_error(hr);
@@ -57,128 +106,23 @@ namespace SevenZip::Callback
 
 		if (prop.vt == VT_EMPTY)
 		{
-			m_Attributes = 0;
-			m_HasAttributes = false;
+			return false;
 		}
-		else if (prop.vt != VT_UI4)
+		else if (prop.vt == VT_BOOL)
 		{
-			_com_issue_error(E_FAIL);
-		}
-		else
-		{
-			m_Attributes = prop.ulVal;
-			m_HasAttributes = true;
-		}
-	}
-	void ExtractArchive::GetPropertyIsDir(UInt32 index)
-	{
-		VariantProperty prop;
-		HRESULT hr = m_ArchiveHandler->GetProperty(index, kpidIsDir, &prop);
-		if (hr != S_OK)
-		{
-			_com_issue_error(hr);
-		}
-
-		if (prop.vt == VT_EMPTY)
-		{
-			m_IsDirectory = false;
-		}
-		else if (prop.vt != VT_BOOL)
-		{
-			_com_issue_error(E_FAIL);
+			return prop.boolVal != VARIANT_FALSE;
 		}
 		else
 		{
-			m_IsDirectory = prop.boolVal != VARIANT_FALSE;
-		}
-	}
-	void ExtractArchive::GetPropertyModifiedTime(UInt32 index)
-	{
-		VariantProperty prop;
-		HRESULT hr = m_ArchiveHandler->GetProperty(index, kpidMTime, &prop);
-		if (hr != S_OK)
-		{
-			_com_issue_error(hr);
-		}
-
-		if (prop.vt == VT_EMPTY)
-		{
-			m_HasModificationTime = false;
-		}
-		else if (prop.vt != VT_FILETIME)
-		{
 			_com_issue_error(E_FAIL);
 		}
-		else
-		{
-			m_ModificationTime = prop.filetime;
-			m_HasModificationTime = true;
-		}
 	}
-	void ExtractArchive::GetPropertySize(UInt32 index)
-	{
-		VariantProperty prop;
-		HRESULT hr = m_ArchiveHandler->GetProperty(index, kpidSize, &prop);
-		if (hr != S_OK)
-		{
-			_com_issue_error(hr);
-		}
-
-		switch (prop.vt)
-		{
-			case VT_EMPTY:
-			{
-				m_HasNewFileSize = false;
-				return;
-			}
-			case VT_UI1:
-			{
-				m_NewFileSize = prop.bVal;
-				break;
-			}
-			case VT_UI2:
-			{
-				m_NewFileSize = prop.uiVal;
-				break;
-			}
-			case VT_UI4:
-			{
-				m_NewFileSize = prop.ulVal;
-				break;
-			}
-			case VT_UI8:
-			{
-				m_NewFileSize = (UInt64)prop.uhVal.QuadPart;
-				break;
-			}
-			default:
-			{
-				_com_issue_error(E_FAIL);
-			}
-		};
-		m_HasNewFileSize = true;
-	}
-	void ExtractArchive::EmitDoneCallback()
-	{
-		if (m_Notifier)
-		{
-			m_Notifier->OnDone(m_RelativePath);
-		}
-	}
-	void ExtractArchive::EmitFileDoneCallback(const TString& path)
-	{
-		if (m_Notifier)
-		{
-			m_Notifier->OnMinorProgress(path, m_NewFileSize, m_NewFileSize);
-		}
-	}
-
-	HRESULT ExtractArchive::RetrieveAllProperties(UInt32 index, Int32 askExtractMode, bool* shouldContinue)
+	HRESULT Extractor::RetrieveAllProperties(uint32_t fileIndex, int32_t askExtractMode)
 	{
 		try
 		{
 			// Get basic properties
-			GetPropertyFilePath(index);
+			m_RelativePath = GetPropertyFilePath(fileIndex);
 
 			// Call notifier
 			if (m_Notifier)
@@ -197,26 +141,36 @@ namespace SevenZip::Callback
 			}
 
 			// Get all other properties
-			GetPropertySize(index);
-			GetPropertyAttributes(index);
-			GetPropertyIsDir(index);
-			GetPropertyModifiedTime(index);
+			m_FileSize = GetPropertyFileSize(fileIndex);
+			m_CompressedFileSize = GetPropertyCompressedFileSize(fileIndex);
+			m_Attributes = GetPropertyAttributes(fileIndex);
+			m_IsDirectory = GetPropertyIsDirectory(fileIndex);
+			m_ModificationTime = GetPropertyModifiedTime(fileIndex);
 
-			*shouldContinue = true;
 			return S_OK;
 		}
-		catch (_com_error& ex)
+		catch (const _com_error& ex)
 		{
 			return ex.Error();
 		}
 	}
-
-	ExtractArchive::ExtractArchive(const CComPtr<IInArchive>& archiveHandler, const TString& directory, ProgressNotifier* notifier)
-		:m_RefCount(*this), m_ArchiveHandler(archiveHandler), m_Directory(directory), m_Notifier(notifier)
+	
+	void Extractor::EmitDoneCallback()
 	{
+		if (m_Notifier)
+		{
+			m_Notifier->OnDone(m_RelativePath);
+		}
+	}
+	void Extractor::EmitFileDoneCallback(const TString& path)
+	{
+		if (m_Notifier)
+		{
+			m_Notifier->OnMinorProgress(path, m_FileSize.value_or(-1), m_FileSize.value_or(-1));
+		}
 	}
 
-	STDMETHODIMP ExtractArchive::QueryInterface(REFIID iid, void** ppvObject)
+	STDMETHODIMP Extractor::QueryInterface(REFIID iid, void** ppvObject)
 	{
 		if (iid == __uuidof(IUnknown))
 		{
@@ -242,16 +196,16 @@ namespace SevenZip::Callback
 		return E_NOINTERFACE;
 	}
 
-	STDMETHODIMP ExtractArchive::SetTotal(UInt64 size)
+	STDMETHODIMP Extractor::SetTotal(UInt64 size)
 	{
 		// SetTotal is never called for ZIP and 7z formats
 		if (m_Notifier)
 		{
-			m_Notifier->OnStartWithTotal(m_AbsolutePath, size);
+			m_Notifier->OnStartWithTotal(m_RelativePath, size);
 		}
 		return S_OK;
 	}
-	STDMETHODIMP ExtractArchive::SetCompleted(const UInt64* completeValue)
+	STDMETHODIMP Extractor::SetCompleted(const UInt64* completeValue)
 	{
 		//Callback Event calls
 		/*
@@ -268,30 +222,40 @@ namespace SevenZip::Callback
 		return S_OK;
 	}
 
-	STDMETHODIMP ExtractArchive::GetStream(UInt32 index, ISequentialOutStream** outStream, Int32 askExtractMode)
+	STDMETHODIMP Extractor::CryptoGetTextPassword(BSTR* password)
 	{
-		bool canContinue = false;
-		HRESULT ret = RetrieveAllProperties(index, askExtractMode, &canContinue);
+		// TODO: support passwords
+		return E_ABORT;
+	}
+}
 
-		if (canContinue)
+namespace SevenZip::Callback
+{
+	STDMETHODIMP FileExtractor::GetStream(UInt32 index, ISequentialOutStream** outStream, Int32 askExtractMode)
+	{
+		HRESULT hr = RetrieveAllProperties(index, askExtractMode);
+		if (SUCCEEDED(hr))
 		{
-			if (m_FinalPaths.empty())
+			if (SUCCEEDED(GetTargetPath(index, m_RelativePath, m_TargetPath)))
 			{
-				// TODO: m_Directory could be a relative path
-				m_AbsolutePath = FileSystem::AppendPath(m_Directory, m_RelativePath);
-			}
-			else if (m_FinalPathsCounter < m_FinalPaths.size())
-			{
-				m_AbsolutePath = m_FinalPaths[m_FinalPathsCounter];
+				if (m_TargetPath.empty())
+				{
+					// TODO: m_Directory could be a relative path
+					m_TargetPath = FileSystem::AppendPath(m_Directory, m_RelativePath);
+				}
+				if (m_TargetPath.empty())
+				{
+					return E_UNEXPECTED;
+				}
 			}
 			else
 			{
-				return HRESULT_FROM_WIN32(ERROR_INVALID_PARAMETER);
+				return E_UNEXPECTED;
 			}
 
 			// Increment counters and call notifier
-			m_FinalPathsCounter++;
-			m_BytesCompleted += m_NewFileSize;
+			m_BytesCompleted += m_FileSize.value_or(0);
+			m_FilesCount++;
 
 			if (m_Notifier)
 			{
@@ -305,78 +269,71 @@ namespace SevenZip::Callback
 			if (m_IsDirectory)
 			{
 				// Creating the directory here supports having empty directories.
-				FileSystem::CreateDirectoryTree(m_AbsolutePath);
+				FileSystem::CreateDirectoryTree(m_TargetPath);
 				*outStream = nullptr;
 				return S_OK;
 			}
 
-			FileSystem::CreateDirectoryTree(FileSystem::GetPath(m_AbsolutePath));
-			auto fileStream = FileSystem::OpenFileToWrite(m_AbsolutePath);
+			FileSystem::CreateDirectoryTree(FileSystem::GetPath(m_TargetPath));
+			auto fileStream = FileSystem::OpenFileToWrite(m_TargetPath);
 			if (!fileStream)
 			{
-				m_AbsolutePath.clear();
+				m_TargetPath.clear();
 				return HRESULT_FROM_WIN32(GetLastError());
 			}
 
 			auto wrapperStream = CreateObject<OutStreamWrapper>(fileStream, m_Notifier);
-			wrapperStream->SetFilePath(m_RelativePath);
-			wrapperStream->SetStreamSize(m_NewFileSize);
+			wrapperStream->SetFilePath(m_TargetPath);
+			wrapperStream->SetStreamSize(m_FileSize.value_or(-1));
 			*outStream = wrapperStream.Detach();
 
 			return S_OK;
 		}
-		return ret;
+		return hr;
 	}
-	STDMETHODIMP ExtractArchive::PrepareOperation(Int32 askExtractMode)
+	STDMETHODIMP FileExtractor::PrepareOperation(Int32 askExtractMode)
 	{
 		return S_OK;
 	}
-	STDMETHODIMP ExtractArchive::SetOperationResult(Int32 operationResult)
+	STDMETHODIMP FileExtractor::SetOperationResult(Int32 operationResult)
 	{
-		if (m_AbsolutePath.empty())
+		if (m_TargetPath.empty())
 		{
 			EmitDoneCallback();
 			return S_OK;
 		}
 
-		if (m_HasModificationTime)
+		if (m_ModificationTime)
 		{
-			HANDLE fileHandle = CreateFile(m_AbsolutePath.c_str(), GENERIC_WRITE, FILE_SHARE_READ, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+			HANDLE fileHandle = ::CreateFile(m_TargetPath.c_str(), GENERIC_WRITE, FILE_SHARE_READ, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
 			if (fileHandle != INVALID_HANDLE_VALUE)
 			{
-				SetFileTime(fileHandle, nullptr, nullptr, &m_ModificationTime);
-				CloseHandle(fileHandle);
+				::SetFileTime(fileHandle, nullptr, nullptr, &*m_ModificationTime);
+				::CloseHandle(fileHandle);
 			}
 		}
 
-		if (m_HasAttributes)
+		if (m_Attributes)
 		{
-			SetFileAttributes(m_AbsolutePath.c_str(), m_Attributes);
+			::SetFileAttributes(m_TargetPath.c_str(), *m_Attributes);
 		}
 
-		//EmitFileDoneCallback(m_RelativePath);
+		EmitFileDoneCallback(m_RelativePath);
 		return S_OK;
-	}
-
-	STDMETHODIMP ExtractArchive::CryptoGetTextPassword(BSTR* password)
-	{
-		// TODO: support passwords
-		return E_ABORT;
 	}
 }
 
 namespace SevenZip::Callback
 {
-	ExtractArchiveToBuffer::ExtractArchiveToBuffer(const CComPtr<IInArchive>& archiveHandler, SevenZip::DataBufferMap& bufferMap, ProgressNotifier* notifier)
-		:ExtractArchive(archiveHandler, TString(), notifier), m_BufferMap(bufferMap)
+	STDMETHODIMP StreamExtractor::SetTotal(UInt64 size)
 	{
+		if (m_Notifier)
+		{
+			m_Notifier->OnStartWithTotal(m_RelativePath, size);
+		}
+		return S_OK;
 	}
-
-	STDMETHODIMP ExtractArchiveToBuffer::SetTotal(UInt64 size)
-	{
-		return ExtractArchive::SetTotal(size);
-	}
-	STDMETHODIMP ExtractArchiveToBuffer::SetCompleted(const UInt64* completeValue)
+	STDMETHODIMP StreamExtractor::SetCompleted(const UInt64* completeValue)
 	{
 		if (m_Notifier)
 		{
@@ -385,25 +342,26 @@ namespace SevenZip::Callback
 		return S_OK;
 	}
 
-	STDMETHODIMP ExtractArchiveToBuffer::GetStream(UInt32 index, ISequentialOutStream** outStream, Int32 askExtractMode)
+	STDMETHODIMP StreamExtractor::GetStream(UInt32 index, ISequentialOutStream** outStream, Int32 askExtractMode)
 	{
-		bool canContinue = false;
-		HRESULT ret = RetrieveAllProperties(index, askExtractMode, &canContinue);
-		if (canContinue)
+		HRESULT hr = RetrieveAllProperties(index, askExtractMode);
+		if (SUCCEEDED(hr))
 		{
-			if (m_BufferMap.count(index))
+			*outStream = nullptr;
+
+			if (m_IsDirectory)
 			{
-				auto wrapperStream = CreateObject<OutStreamWrapperMemory>(m_BufferMap.at(index), m_Notifier);
-				wrapperStream->SetFilePath(m_RelativePath);
-				*outStream = wrapperStream.Detach();
+				return OnDirectory(index, m_RelativePath);
+			}
+			else if (auto stream = CreateStream(index, m_RelativePath))
+			{
+				stream->SetFilePath(m_RelativePath);
+
+				*outStream = stream.Detach();
 				return S_OK;
 			}
-			return HRESULT_FROM_WIN32(ERROR_INVALID_PARAMETER);
+			return E_FAIL;
 		}
-		return ret;
-	}
-	STDMETHODIMP ExtractArchiveToBuffer::SetOperationResult(Int32 operationResult)
-	{
-		return ExtractArchive::SetOperationResult(operationResult);
+		return hr;
 	}
 }

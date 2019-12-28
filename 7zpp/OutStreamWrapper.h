@@ -1,39 +1,87 @@
 #pragma once
 #include <7zip/IStream.h>
 #include "SevenZipArchive.h"
-class ProgressNotifier;
+#include "COM.h"
+#include "Stream.h"
 
 namespace SevenZip
 {
-	class OutStreamWrapper: public IOutStream
-	{
-		protected:
-			long m_RefCount = 0;
-			CComPtr<IStream> m_BaseStream = nullptr;
+	class ProgressNotifier;
+}
 
+namespace SevenZip
+{
+	class OutStream: public IOutStream
+	{
+		private:
+			COM::RefCount<OutStream> m_RefCount;
+
+		protected:
 			TString m_FilePath;
-			ProgressNotifier* m_ProgressNotifier = nullptr;
-			int64_t m_CurrentPos = 0;
-			int64_t m_StreamSize = 0;
+			ProgressNotifier* m_Notifier = nullptr;
 
 		public:
-			OutStreamWrapper(ProgressNotifier* notifier = nullptr);
-			OutStreamWrapper(const CComPtr<IStream>& baseStream, ProgressNotifier* notifier = nullptr);
-			virtual ~OutStreamWrapper();
+			OutStream(ProgressNotifier* notifier = nullptr)
+				:m_RefCount(*this), m_Notifier(notifier)
+			{
+			}
+			virtual ~OutStream() = default;
 
 		public:
 			STDMETHOD(QueryInterface)(REFIID iid, void** ppvObject) override;
-			STDMETHOD_(ULONG, AddRef)() override;
-			STDMETHOD_(ULONG, Release)() override;
+			STDMETHOD_(ULONG, AddRef)() override
+			{
+				return m_RefCount.AddRef();
+			}
+			STDMETHOD_(ULONG, Release)() override
+			{
+				return m_RefCount.Release();
+			}
 
+		public:
+			void SetNotifier(ProgressNotifier* notifier)
+			{
+				m_Notifier = notifier;
+			}
+			void SetFilePath(const TString& path)
+			{
+				m_FilePath = path;
+			}
+	};
+}
+
+namespace SevenZip
+{
+	class OutStreamWrapper: public OutStream
+	{
+		protected:
+			CComPtr<IStream> m_BaseStream;
+			int64_t m_StreamSize = 0;
+			int64_t m_CurrentPosition = 0;
+
+		public:
+			OutStreamWrapper(ProgressNotifier* notifier = nullptr)
+				:OutStream(notifier)
+			{
+			}
+			OutStreamWrapper(const CComPtr<IStream>& baseStream, ProgressNotifier* notifier = nullptr)
+				:OutStream(notifier), m_BaseStream(baseStream)
+			{
+			}
+
+		public:
 			// ISequentialOutStream
-			STDMETHOD(Write)(const void* data, UInt32 size, UInt32* processedSize) override;
+			STDMETHOD(Write)(const void* data, UInt32 size, UInt32* written) override;
 
 			// IOutStream
 			STDMETHOD(Seek)(Int64 offset, UInt32 seekOrigin, UInt64* newPosition) override;
 			STDMETHOD(SetSize)(UInt64 newSize) override;
 
 		public:
+			void SetNotifier(ProgressNotifier* notifier)
+			{
+				m_Notifier = notifier;
+			}
 			void SetFilePath(const TString& path)
 			{
 				m_FilePath = path;
@@ -42,32 +90,5 @@ namespace SevenZip
 			{
 				m_StreamSize = size;
 			}
-	};
-}
-
-namespace SevenZip
-{
-	class OutStreamWrapperMemory: public OutStreamWrapper
-	{
-		private:
-			DataBuffer& m_Buffer;
-
-		public:
-			OutStreamWrapperMemory(DataBuffer& buffer, ProgressNotifier* notifier)
-				:OutStreamWrapper(notifier), m_Buffer(buffer)
-			{
-				m_StreamSize = m_Buffer.size();
-			}
-			virtual ~OutStreamWrapperMemory()
-			{
-			}
-
-		public:
-			// ISequentialOutStream
-			STDMETHOD(Write)(const void* data, UInt32 size, UInt32* processedSize) override;
-
-			// IOutStream
-			STDMETHOD(Seek)(Int64 offset, UInt32 seekOrigin, UInt64* newPosition) override;
-			STDMETHOD(SetSize)(UInt64 newSize) override;
 	};
 }

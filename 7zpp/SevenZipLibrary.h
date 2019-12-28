@@ -1,6 +1,6 @@
 #pragma once
 #include "SevenZipException.h"
-#include "CompressionFormat.h"
+#include "Common.h"
 
 namespace SevenZip
 {
@@ -28,12 +28,11 @@ namespace SevenZip
 			}
 
 			bool Load();
-			bool Load(const TString& libraryPath);
+			bool Load(TStringView libraryPath);
 			void Free();
 
 			bool CreateObject(const GUID& classID, const GUID& interfaceID, void** outObject) const;
 
-			#ifdef SEVENZIPCPP_LIB
 			template<class T>
 			CComPtr<T> CreateObject(const GUID& classID, const GUID& interfaceID) const
 			{
@@ -46,6 +45,5 @@ namespace SevenZip
 				}
 				return nullptr;
 			}
-			#endif
 	};
 }

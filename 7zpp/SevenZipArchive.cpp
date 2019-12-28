@@ -20,92 +20,22 @@
 namespace
 {
 	constexpr auto AllFilesPattern = _T("*");
-}
 
-namespace SevenZip
-{
-	// Metadata
-	void Archive::InvalidateCache()
+	const char* GetMethodString(SevenZip::CompressionMethod method)
 	{
-		m_IsMetaDataReaded = false;
-	}
+		using namespace SevenZip;
 
-	bool Archive::DetectCompressionFormatHelper(CompressionFormatEnum& format)
-	{
-		m_OverrideCompressionFormat = false;
-		return Utility::DetectCompressionFormat(m_Library, m_ArchiveFilePath, format, m_Notifier);
-	}
-	bool Archive::ReadInArchiveMetadataHelper()
-	{
-		bool detectedCompressionFormat = true;
-		if (!m_OverrideCompressionFormat)
+		switch (method)
 		{
-			detectedCompressionFormat = DetectCompressionFormatHelper(m_Property_CompressionFormat);
-		}
-		bool gotItemNumberNamesAndOrigSizes = InitItemsNames();
-
-		return detectedCompressionFormat && gotItemNumberNamesAndOrigSizes;
-	}
-	bool Archive::InitNumberOfItems()
-	{
-		return Utility::GetNumberOfItems(m_Library, m_ArchiveFilePath, m_Property_CompressionFormat, m_ItemCount, m_Notifier);
-	}
-	bool Archive::InitItemsNames()
-	{
-		return Utility::GetItemsNames(m_Library, m_ArchiveFilePath, m_Property_CompressionFormat, m_ItemCount, m_ItemNames, m_ItemOriginalSizes, m_Notifier);
-	}
-
-	// Extraction
-	bool Archive::ExtractToDisk(const TString& destDirectory, const IndexVector* filesIndices, const TStringVector& finalPaths, ProgressNotifier* notifier) const
-	{
-		if (auto fileStream = FileSystem::OpenFileToRead(m_ArchiveFilePath))
-		{
-			auto archive = Utility::GetArchiveReader(m_Library, m_Property_CompressionFormat);
-			auto inFile = CreateObject<InStreamWrapper>(fileStream);
-			auto openCallback = CreateObject<Callback::OpenArchive>();
-
-			if (SUCCEEDED(archive->Open(inFile, 0, openCallback)))
-			{
-				auto extractCallback = CreateObject<Callback::ExtractArchive>(archive, destDirectory, notifier);
-				extractCallback->SetFinalPath(finalPaths);
-
-				const uint32_t* indiencesData = filesIndices ? filesIndices->data() : nullptr;
-				const uint32_t indiencesCount = filesIndices ? (uint32_t)filesIndices->size() : -1;
-
-				if (SUCCEEDED(archive->Extract(indiencesData, indiencesCount, false, extractCallback)))
-				{
-					archive->Close();
-					if (notifier)
-					{
-						notifier->OnDone();
-					}
-					return true;
-				}
-			}
-		}
-		return false;
-	}
-	IndexVector Archive::RemoveInvalidIndexes(const IndexVector& sourceArray) const
-	{
-		IndexVector newArray = sourceArray;
-		newArray.erase(std::remove(newArray.begin(), newArray.end(), std::numeric_limits<IndexVector::value_type>::max()), newArray.end());
-		return newArray;
-	}
-
-	// Compression
-	const char* Archive::GetMethodString() const
-	{
-		switch (m_Property_CompressionMethod)
-		{
-			case LZMA:
+			case CompressionMethod::LZMA:
 			{
 				return "LZMA";
 			}
-			case BZIP2:
+			case CompressionMethod::BZIP2:
 			{
 				return "BZip2";
 			}
-			case PPMD:
+			case CompressionMethod::PPMD:
 			{
 				return "PPMd";
 			}
@@ -114,61 +44,118 @@ namespace SevenZip
 		// LZMA2 is the default
 		return "LZMA2";
 	}
-	std::string Archive::FormatMethodString() const
+	std::string FormatMethodString(int dictionarySize, SevenZip::CompressionMethod method)
 	{
-		const int64_t dictSizeMB = 20 + m_Property_DictionarySize;
+		using namespace SevenZip;
+
+		const int64_t dictSizeMB = 20 + dictionarySize;
 
 		std::string result(256, '\000');
-		switch (m_Property_CompressionMethod)
+		switch (method)
 		{
-			case LZMA:
-			case LZMA2:
+			case CompressionMethod::LZMA:
+			case CompressionMethod::LZMA2:
 			{
-				sprintf_s(result.data(), result.size(), "%s:d=%lld", GetMethodString(), dictSizeMB);
+				sprintf_s(result.data(), result.size(), "%s:d=%lld", GetMethodString(method), dictSizeMB);
 				break;
 			}
-			case BZIP2:
+			case CompressionMethod::BZIP2:
 			{
 				result = "BZip2:d=900000b";
 				break;
 			}
-			case PPMD:
+			case CompressionMethod::PPMD:
 			{
-				sprintf_s(result.data(), result.size(), "%s:mem=%lld", GetMethodString(), dictSizeMB);
+				sprintf_s(result.data(), result.size(), "%s:mem=%lld", GetMethodString(method), dictSizeMB);
 				break;
 			}
 		};
 		return result;
 	}
-	bool Archive::SetCompressionProperties(IUnknown* pArchive)
+	bool SetCompressionProperties(IUnknown& archive, bool multithreaded, bool solidArchive, int compressionLevel, int dictionarySize, SevenZip::CompressionMethod method)
 	{
-		std::string method = FormatMethodString();
-		const wchar_t* names[] = {L"x", L"s", L"mt", L"m"};
+		using namespace SevenZip;
+
+		std::string methodString = FormatMethodString(dictionarySize, method);
+		constexpr wchar_t* names[] = {L"x", L"s", L"mt", L"m"};
 		VariantProperty values[] =
 		{
-			(UInt32)GetProperty_CompressionLevel(),
-			GetProperty_Solid(),
-			//"100f10m",
-			GetProperty_MultiThreaded(),
-			method.c_str()
+			static_cast<UInt32>(compressionLevel),
+			solidArchive,
+			multithreaded,
+			methodString.c_str()
 		};
 
-		CComPtr<ISetProperties> setter;
-		pArchive->QueryInterface(IID_ISetProperties, reinterpret_cast<void**>(&setter));
-		if (setter == nullptr)
+		CComPtr<ISetProperties> propertiesSet;
+		archive.QueryInterface(SevenZip::IID_ISetProperties, reinterpret_cast<void**>(&propertiesSet));
+		if (!propertiesSet)
 		{
-			return false; // Archive does not support setting compression properties
-		}
-
-		const size_t propertiesCount = ARRAYSIZE(values);
-		HRESULT hr = setter->SetProperties(names, values, propertiesCount);
-		if (hr != S_OK)
-		{
+			// Archive does not support setting compression properties
 			return false;
 		}
-		return true;
+
+		return SUCCEEDED(propertiesSet->SetProperties(names, values, ARRAYSIZE(values)));
 	}
-	bool Archive::FindAndCompressFiles(const TString& directory, const TString& searchPattern, const TString& pathPrefix, bool recursion, ProgressNotifier* notifier)
+}
+
+namespace SevenZip
+{
+	void Archive::InvalidateCache()
+	{
+		m_IsLoaded = false;
+	}
+	bool Archive::InitCompressionFormat()
+	{
+		m_OverrideCompressionFormat = false;
+		m_Property_CompressionFormat = Utility::GetCompressionFormat(*m_Library, m_ArchivePath, m_Notifier);
+
+		return m_Property_CompressionFormat != CompressionFormat::Unknown;
+	}
+	bool Archive::InitItems()
+	{
+		return Utility::GetArchiveItems(*m_Library, m_ArchivePath, m_Property_CompressionFormat, m_Items, m_Notifier);
+	}
+	bool Archive::InitMetadata()
+	{
+		if (!m_IsLoaded)
+		{
+			const bool detectedFormat = !m_OverrideCompressionFormat ? InitCompressionFormat() : true;
+			m_IsLoaded = detectedFormat && InitItems();
+		}
+		return m_IsLoaded;
+	}
+
+	bool Archive::DoExtract(const FileIndexVector& files, Callback::Extractor& extractor) const
+	{
+		if (auto fileStream = FileSystem::OpenFileToRead(m_ArchivePath))
+		{
+			auto archive = Utility::GetArchiveReader(*m_Library, m_Property_CompressionFormat);
+			InStreamWrapper inFile(fileStream, m_Notifier);
+			Callback::OpenArchive openCallback(m_Notifier);
+
+			if (SUCCEEDED(archive->Open(&inFile, nullptr, &openCallback)))
+			{
+				const uint32_t* indexData = !files.empty() ? files.data() : nullptr;
+				const uint32_t indexSize = !files.empty() ? static_cast<uint32_t>(files.size()) : std::numeric_limits<uint32_t>::max();
+
+				extractor.SetArchive(archive);
+				extractor.SetNotifier(m_Notifier);
+				if (SUCCEEDED(archive->Extract(indexData, indexSize, false, &extractor)))
+				{
+					archive->Close();
+					if (m_Notifier)
+					{
+						m_Notifier->OnDone();
+					}
+					return true;
+				}
+			}
+
+			archive->Close();
+		}
+		return false;
+	}
+	bool Archive::FindAndCompressFiles(const TString& directory, const TString& searchPattern, const TString& pathPrefix, bool recursion)
 	{
 		if (!FileSystem::DirectoryExists(directory) || FileSystem::IsDirectoryEmptyRecursive(directory))
 		{
@@ -182,212 +169,94 @@ namespace SevenZip
 		{
 			relativePaths[i] = FileSystem::ExtractRelativePath(directory, files[i].FilePath);
 		}
-		return CompressFilesToArchive(pathPrefix, files, relativePaths, notifier);
+		return CompressFilesToArchive(pathPrefix, files, relativePaths);
 	}
-	bool Archive::CompressFilesToArchive(const TString& pathPrefix, const FilePathInfo::Vector& filePaths, const TStringVector& inArchiveFilePaths, ProgressNotifier* notifier)
+	bool Archive::CompressFilesToArchive(const TString& pathPrefix, const FilePathInfo::Vector& filePaths, const TStringVector& inArchiveFilePaths)
 	{
-		auto archiveWriter = Utility::GetArchiveWriter(m_Library, m_Property_CompressionFormat);
-		SetCompressionProperties(archiveWriter);
+		auto archiveWriter = Utility::GetArchiveWriter(*m_Library, m_Property_CompressionFormat);
+		SetCompressionProperties(*archiveWriter, m_Property_MultiThreaded, m_Property_Solid, m_Property_CompressionLevel, m_Property_DictionarySize, m_Property_CompressionMethod);
 
-		auto outFile = CreateObject<OutStreamWrapper>(FileSystem::OpenFileToWrite(m_ArchiveFilePath));
-		auto updateCallback = CreateObject<Callback::UpdateArchive>(pathPrefix, filePaths, inArchiveFilePaths, m_ArchiveFilePath, notifier);
-		updateCallback->SetExistingItemsCount(m_ItemCount);
+		auto outFile = CreateObject<OutStreamWrapper>(FileSystem::OpenFileToWrite(m_ArchivePath));
+		auto updateCallback = CreateObject<Callback::UpdateArchiveBase>(pathPrefix, filePaths, inArchiveFilePaths, m_ArchivePath, m_Notifier);
+		updateCallback->SetExistingItemsCount(m_Items.size());
 
 		if (SUCCEEDED(archiveWriter->UpdateItems(outFile, (UInt32)filePaths.size(), updateCallback)))
 		{
-			if (notifier)
+			if (m_Notifier)
 			{
-				notifier->OnDone();
+				m_Notifier->OnDone();
 			}
 			return true;
 		}
 		return false;
 	}
 
-	//////////////////////////////////////////////////////////////////////////
-	// Constructor and destructor
-	Archive::Archive(const Library& library, const TString& archivePath, ProgressNotifier* notifier)
-		:m_Library(library),
-		m_Notifier(notifier),
-		m_ArchiveFilePath(archivePath),
-		m_Property_CompressionFormat(CompressionFormat::Unknown),
-		m_Property_CompressionLevel(CompressionLevel::None)
+	bool Archive::Load(TStringView filePath)
 	{
+		// Clear metadata
+		*this = std::move(Archive(*m_Library));
+
+		// Load new archive
+		m_ArchivePath = filePath;
+		m_IsLoaded = InitMetadata();
+
+		return m_IsLoaded;
 	}
-
-	// Metadata
-	bool Archive::ReadInArchiveMetadata()
-	{
-		m_IsMetaDataReaded = true;
-		return ReadInArchiveMetadataHelper();
-	}
-	bool Archive::DetectCompressionFormat()
-	{
-		m_OverrideCompressionFormat = false;
-		return DetectCompressionFormatHelper(m_Property_CompressionFormat);
-	}
-	size_t Archive::GetNumberOfItems()
-	{
-		if (!m_IsMetaDataReaded)
-		{
-			m_IsMetaDataReaded = ReadInArchiveMetadataHelper();
-		}
-		return m_ItemCount;
-	}
-	const TStringVector& Archive::GetItemsNames()
-	{
-		if (!m_IsMetaDataReaded)
-		{
-			m_IsMetaDataReaded = ReadInArchiveMetadataHelper();
-		}
-		return m_ItemNames;
-	}
-	const std::vector<size_t>& Archive::GetOrigSizes()
-	{
-		if (!m_IsMetaDataReaded)
-		{
-			m_IsMetaDataReaded = ReadInArchiveMetadataHelper();
-		}
-		return m_ItemOriginalSizes;
-	}
-
-	// Properties
-	void Archive::SetProperty_CompressionFormat(const CompressionFormatEnum& format)
-	{
-		m_OverrideCompressionFormat = true;
-		InvalidateCache();
-		m_Property_CompressionFormat = format;
-	}
-	CompressionFormatEnum Archive::GetProperty_CompressionFormat()
-	{
-		if (!m_IsMetaDataReaded && !m_OverrideCompressionFormat)
-		{
-			m_IsMetaDataReaded = ReadInArchiveMetadataHelper();
-		}
-		return m_Property_CompressionFormat;
-	}
-
-	// Listing
-	bool Archive::ListArchive(ListingNotifier* callback) const
-	{
-		if (auto fileStream = FileSystem::OpenFileToRead(m_ArchiveFilePath))
-		{
-			auto archive = Utility::GetArchiveReader(m_Library, m_Property_CompressionFormat);
-			auto inFile = CreateObject<InStreamWrapper>(fileStream);
-			auto openCallback = CreateObject<Callback::OpenArchive>();
-
-			if (SUCCEEDED(archive->Open(inFile, nullptr, openCallback)))
-			{
-				// List command
-				UInt32 numItems = 0;
-				archive->GetNumberOfItems(&numItems);
-				for (UInt32 i = 0; i < numItems; i++)
-				{
-					// Get uncompressed size of file
-					VariantProperty prop;
-					archive->GetProperty(i, kpidSize, &prop);
-
-					int size = prop.intVal;
-
-					// Get name of file
-					archive->GetProperty(i, kpidPath, &prop);
-
-					// Valid string? Pass back the found value and call the callback function if set
-					if (prop.vt == VT_BSTR)
-					{
-						const wchar_t* path = prop.bstrVal;
-						if (callback)
-						{
-							callback->OnFileFound(path, size);
-						}
-					}
-				}
-
-				VariantProperty prop;
-				archive->GetArchiveProperty(kpidPath, &prop);
-				archive->Close();
-
-				if (prop.vt == VT_BSTR)
-				{
-					const wchar_t* path = prop.bstrVal;
-					if (callback)
-					{
-						callback->OnListingDone(path);
-					}
-				}
-				return true;
-			}
-		}
-		return false;
-	}
-
+	
 	// Extraction
-	bool Archive::ExtractArchive(const TString& destDirectory, ProgressNotifier* notifier) const
+	bool Archive::ExtractArchive(const FileIndexVector& files, Callback::Extractor& extractor) const
 	{
-		return ExtractToDisk(destDirectory, nullptr, TStringVector(), notifier);
+		return DoExtract(files, extractor);
 	}
-	bool Archive::ExtractArchive(const IndexVector& filesIndices, const TString& destDirectory, ProgressNotifier* notifier) const
+	bool Archive::ExtractArchive(const TString& directory) const
 	{
-		return ExtractToDisk(destDirectory, &filesIndices, TStringVector(), notifier);
+		Callback::FileExtractor extractor(directory, m_Notifier);
+		return DoExtract({}, extractor);
 	}
-	bool Archive::ExtractArchive(const IndexVector& filesIndices, const TStringVector& finalPaths, ProgressNotifier* notifier) const
+	bool Archive::ExtractArchive(const FileIndexVector& files, const TString& directory) const
 	{
-		return ExtractToDisk(TString(), &filesIndices, finalPaths, notifier);
+		Callback::FileExtractor extractor(directory, m_Notifier);
+		return DoExtract(files, extractor);
 	}
-	bool Archive::ExtractToMemory(const IndexVector& filesIndices, DataBufferMap& bufferMap, ProgressNotifier* notifier) const
+	bool Archive::ExtractArchive(const FileIndexVector& files, const TStringVector& finalPaths) const
 	{
-		if (auto fileStream = FileSystem::OpenFileToRead(m_ArchiveFilePath))
+		class ExtractToPaths: public Callback::FileExtractor
 		{
-			auto archive = Utility::GetArchiveReader(m_Library, m_Property_CompressionFormat);
-			auto inFile = CreateObject<InStreamWrapper>(fileStream, notifier);
-			auto openCallback = CreateObject<Callback::OpenArchive>();
+			private:
+				const TStringVector& m_TargetPaths;
 
-			if (SUCCEEDED(archive->Open(inFile, nullptr, openCallback)))
-			{
-				IndexVector newIndexes = RemoveInvalidIndexes(filesIndices);
-				for (uint32_t index: newIndexes)
+			public:
+				ExtractToPaths(const TStringVector& targetPaths, ProgressNotifier* notifier = nullptr)
+					:FileExtractor({}, notifier), m_TargetPaths(targetPaths)
 				{
-					if (index < m_ItemOriginalSizes.size())
-					{
-						size_t requiredSize = m_ItemOriginalSizes[index];
-						bufferMap[index] = DataBuffer(requiredSize, 0);
-					}
 				}
 
-				auto extractCallback = CreateObject<Callback::ExtractArchiveToBuffer>(archive, bufferMap, notifier);
-				if (SUCCEEDED(archive->Extract(newIndexes.data(), (UInt32)newIndexes.size(), false, extractCallback)))
+			public:
+				HRESULT GetTargetPath(const UInt32 index, const TString& ralativePath, TString& targetPath) const override
 				{
-					archive->Close();
-					if (notifier)
+					if (index < m_TargetPaths.size())
 					{
-						notifier->OnDone(m_ArchiveFilePath);
+						targetPath = m_TargetPaths[index];
+						return S_OK;
 					}
-					return true;
+					return E_INVALIDARG;
 				}
-			}
-		}
-		return false;
-	}
-	bool Archive::ExtractToMemory(uint32_t index, DataBuffer& buffer, ProgressNotifier* notifier) const
-	{
-		DataBufferMap bufferMap;
-		bufferMap.insert_or_assign(index, DataBuffer());
-		bool ret = ExtractToMemory({index}, bufferMap, notifier);
+		};
 
-		buffer = bufferMap.at(index);
-		return ret;
+		ExtractToPaths extractor(finalPaths, m_Notifier);
+		return DoExtract(files, extractor);
 	}
 
 	// Compression
-	bool Archive::CompressDirectory(const TString& directory, bool isRecursive, ProgressNotifier* notifier)
+	bool Archive::CompressDirectory(const TString& directory, bool isRecursive)
 	{
-		return FindAndCompressFiles(directory, AllFilesPattern, FileSystem::GetPath(directory), isRecursive, notifier);
+		return FindAndCompressFiles(directory, AllFilesPattern, FileSystem::GetPath(directory), isRecursive);
 	}
-	bool Archive::CompressFiles(const TString& directory, const TString& searchFilter, bool isRecursive, ProgressNotifier* notifier)
+	bool Archive::CompressFiles(const TString& directory, const TString& searchFilter, bool recursive)
 	{
-		return FindAndCompressFiles(directory, searchFilter, directory, isRecursive, notifier);
+		return FindAndCompressFiles(directory, searchFilter, directory, recursive);
 	}
-	bool Archive::CompressSpecifiedFiles(const TStringVector& sourceFiles, const TStringVector& archivePaths, ProgressNotifier* notifier)
+	bool Archive::CompressSpecifiedFiles(const TStringVector& sourceFiles, const TStringVector& archivePaths)
 	{
 		FilePathInfo::Vector files;
 		files.resize(sourceFiles.size());
@@ -396,28 +265,52 @@ namespace SevenZip
 			FilePathInfo::Vector infoArray = FileSystem::GetFile(sourceFiles[i]);
 			if (!infoArray.empty())
 			{
-				files[i] = infoArray.front();
+				files[i] = std::move(infoArray.front());
 			}
 		}
 
-		return CompressFilesToArchive(TString(), files, archivePaths, notifier);
+		return CompressFilesToArchive(TString(), files, archivePaths);
 	}
-	bool Archive::CompressFile(const TString& filePath, ProgressNotifier* notifier)
+	bool Archive::CompressFile(const TString& filePath)
 	{
 		FilePathInfo::Vector files = FileSystem::GetFile(filePath);
 		if (!files.empty())
 		{
-			return CompressFilesToArchive(FileSystem::GetPath(filePath), files, {TString()}, notifier);
+			return CompressFilesToArchive(FileSystem::GetPath(filePath), files, {});
 		}
 		return false;
 	}
-	bool Archive::CompressFile(const TString& filePath, const TString& archivePath, ProgressNotifier* notifier)
+	bool Archive::CompressFile(const TString& filePath, const TString& archivePath)
 	{
 		FilePathInfo::Vector files = FileSystem::GetFile(filePath);
 		if (!files.empty())
 		{
-			return CompressFilesToArchive(FileSystem::GetPath(filePath), files, {archivePath}, notifier);
+			return CompressFilesToArchive(FileSystem::GetPath(filePath), files, {archivePath});
 		}
 		return false;
+	}
+
+	Archive& Archive::operator=(Archive&& other)
+	{
+		Archive nullObject(*m_Library);
+
+		ExchangeAndReset(m_Library, other.m_Library, nullptr);
+		ExchangeAndReset(m_Notifier, other.m_Notifier, nullObject.m_Notifier);
+		m_ArchivePath = std::move(other.m_ArchivePath);
+
+		// Metadata
+		m_Items = std::move(nullObject.m_Items);
+		ExchangeAndReset(m_IsLoaded, other.m_IsLoaded, nullObject.m_IsLoaded);
+		ExchangeAndReset(m_OverrideCompressionFormat, other.m_OverrideCompressionFormat, nullObject.m_OverrideCompressionFormat);
+
+		// Properties
+		ExchangeAndReset(m_Property_CompressionFormat, other.m_Property_CompressionFormat, nullObject.m_Property_CompressionFormat);
+		ExchangeAndReset(m_Property_CompressionMethod, other.m_Property_CompressionMethod, nullObject.m_Property_CompressionMethod);
+		ExchangeAndReset(m_Property_CompressionLevel, other.m_Property_CompressionLevel, nullObject.m_Property_CompressionLevel);
+		ExchangeAndReset(m_Property_DictionarySize, other.m_Property_DictionarySize, nullObject.m_Property_DictionarySize);
+		ExchangeAndReset(m_Property_MultiThreaded, other.m_Property_MultiThreaded, nullObject.m_Property_MultiThreaded);
+		ExchangeAndReset(m_Property_Solid, other.m_Property_Solid, nullObject.m_Property_Solid);
+
+		return *this;
 	}
 }

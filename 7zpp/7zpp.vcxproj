@@ -355,12 +355,12 @@
     <ClCompile Include="ArchiveExtractCallback.cpp" />
     <ClCompile Include="ArchiveOpenCallback.cpp" />
     <ClCompile Include="ArchiveUpdateCallback.cpp" />
-    <ClCompile Include="CompressionFormat.cpp" />
     <ClCompile Include="FileSystem.cpp" />
     <ClCompile Include="GUIDs.cpp" />
     <ClCompile Include="InStreamWrapper.cpp" />
     <ClCompile Include="OutStreamWrapper.cpp" />
     <ClCompile Include="PathScanner.cpp" />
+    <ClCompile Include="SevenString.cpp" />
     <ClCompile Include="VariantProperty.cpp" />
     <ClCompile Include="SevenZipArchive.cpp" />
     <ClCompile Include="SevenZipException.cpp" />
@@ -379,15 +379,13 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Include\7zpp\7zpp.h" />
-    <ClInclude Include="7zpp.h" />
+    <ClInclude Include="..\Include\7zpp\7zppEx.h" />
+    <ClInclude Include="BaseInclude.h" />
     <ClInclude Include="ArchiveExtractCallback.h" />
     <ClInclude Include="ArchiveOpenCallback.h" />
     <ClInclude Include="ArchiveUpdateCallback.h" />
     <ClInclude Include="Common.h" />
-    <ClInclude Include="CompressionFormat.h" />
-    <ClInclude Include="CompressionLevel.h" />
     <ClInclude Include="COM.h" />
-    <ClInclude Include="Enum.h" />
     <ClInclude Include="FileInfo.h" />
     <ClInclude Include="FileSystem.h" />
     <ClInclude Include="GUIDs.h" />
@@ -397,6 +395,7 @@
     <ClInclude Include="OutStreamWrapper.h" />
     <ClInclude Include="PathScanner.h" />
     <ClInclude Include="ProgressNotifier.h" />
+    <ClInclude Include="Stream.h" />
     <ClInclude Include="VariantProperty.h" />
     <ClInclude Include="SevenZipArchive.h" />
     <ClInclude Include="SevenZipException.h" />

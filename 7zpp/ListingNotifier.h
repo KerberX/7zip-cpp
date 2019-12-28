@@ -1,6 +1,6 @@
 #pragma once
 #include "SevenZipLibrary.h"
-#include "CompressionFormat.h"
+#include "SevenString.h"
 
 namespace SevenZip
 {
@@ -11,9 +11,9 @@ namespace SevenZip
 
 		public:
 			// Called for each file found in the archive. Size in bytes.
-			virtual void OnFileFound(const WCHAR* path, int64_t size) {}
+			virtual void OnFileFound(TStringView path, int64_t size) {}
 
 			// Called when all the files have been listed
-			virtual void OnListingDone(const WCHAR* path) {}
+			virtual void OnListingDone(TStringView path) {}
 	};
 }

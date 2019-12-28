@@ -21,11 +21,12 @@ namespace SevenZip
 	{
 		return Load(DefaultLibraryPath);
 	}
-	bool Library::Load(const TString& libraryPath)
+	bool Library::Load(TStringView libraryPath)
 	{
 		if (!IsLoaded())
 		{
-			m_LibraryHandle = ::LoadLibrary(libraryPath.c_str());
+			TString path(libraryPath);
+			m_LibraryHandle = ::LoadLibrary(path.c_str());
 			if (m_LibraryHandle)
 			{
 				m_CreateObjectFunc = reinterpret_cast<CreateObjectFunc>(::GetProcAddress(m_LibraryHandle, "CreateObject"));

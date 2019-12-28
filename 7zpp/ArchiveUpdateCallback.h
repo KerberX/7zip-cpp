@@ -14,11 +14,12 @@ namespace SevenZip
 
 namespace SevenZip::Callback
 {
-	class UpdateArchive: public IArchiveUpdateCallback, public ICryptoGetTextPassword2, public ICompressProgressInfo
+	class UpdateArchiveBase: public IArchiveUpdateCallback, public ICryptoGetTextPassword2, public ICompressProgressInfo
 	{
 		private:
-			COM::RefCount<UpdateArchive> m_RefCount;
+			COM::RefCount<UpdateArchiveBase> m_RefCount;
 
+		protected:
 			TString m_DirectoryPrefix;
 			TString m_OutputPath;
 			size_t m_ExistingItemsCount = 0;
@@ -28,10 +29,14 @@ namespace SevenZip::Callback
 			ProgressNotifier* m_ProgressNotifier = nullptr;
 
 		public:
-			UpdateArchive(const TString& dirPrefix, const std::vector<FilePathInfo>& filePaths, const std::vector<TString>& inArchiveFilePaths, const TString& outputFilePath, ProgressNotifier* notifier = nullptr);
-			~UpdateArchive();
+			UpdateArchiveBase(const TString& dirPrefix, const std::vector<FilePathInfo>& filePaths, const std::vector<TString>& inArchiveFilePaths, const TString& outputFilePath, ProgressNotifier* notifier = nullptr)
+				:m_RefCount(*this), m_DirectoryPrefix(dirPrefix), m_FilePaths(filePaths), m_ArchiveRelativeFilePaths(inArchiveFilePaths), m_OutputPath(outputFilePath), m_ProgressNotifier(notifier)
+			{
+			}
+			~UpdateArchiveBase() = default;
 
 		public:
+			STDMETHOD(QueryInterface)(REFIID iid, void** ppvObject);
 			STDMETHOD_(ULONG, AddRef)() override
 			{
 				return m_RefCount.AddRef();
@@ -40,7 +45,6 @@ namespace SevenZip::Callback
 			{
 				return m_RefCount.Release();
 			}
-			STDMETHOD(QueryInterface)(REFIID iid, void** ppvObject);
 
 			// IProgress
 			STDMETHOD(SetTotal)(UInt64 size);

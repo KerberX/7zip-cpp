@@ -1,42 +1,29 @@
 #pragma once
-#include "SevenZipLibrary.h"
-#include "CompressionFormat.h"
 #include <7zip/Archive/IArchive.h>
 #include <7zTypes.h>
+#include "Common.h"
 #include "GUIDs.h"
-#include "FileSystem.h"
+#include "FileInfo.h"
 #include "ArchiveOpenCallback.h"
 #include "InStreamWrapper.h"
 
 namespace SevenZip
 {
+	class Library;
 	class ProgressNotifier;
 }
 
 namespace SevenZip::Utility
 {
-	TString& MakeLower(TString& string);
-	TString& MakeUpper(TString& string);
-	inline TString ToLower(const TString& string)
-	{
-		TString s = string;
-		return MakeLower(s);
-	}
-	inline TString ToUpper(const TString& string)
-	{
-		TString s = string;
-		return MakeUpper(s);
-	}
+	std::optional<GUID> GetCompressionGUID(CompressionFormat format);
 
-	std::optional<GUID> GetCompressionGUID(const CompressionFormatEnum& format);
+	CComPtr<IInArchive> GetArchiveReader(const Library& library, CompressionFormat format);
+	CComPtr<IOutArchive> GetArchiveWriter(const Library& library, CompressionFormat format);
 
-	CComPtr<IInArchive> GetArchiveReader(const Library& library, const CompressionFormatEnum& format);
-	CComPtr<IOutArchive> GetArchiveWriter(const Library& library, const CompressionFormatEnum& format);
+	CompressionFormat GetCompressionFormat(const Library& library, const TString& archivePath, ProgressNotifier* notifier = nullptr);
+	bool GetNumberOfItems(const Library& library, const TString& archivePath, CompressionFormat format, size_t& itemCount, ProgressNotifier* notifier = nullptr);
+	bool GetArchiveItems(const Library& library, const TString& archivePath, CompressionFormat format, FileInfo::Vector& items, ProgressNotifier* notifier = nullptr);
 
-	bool DetectCompressionFormat(const Library& library, const TString& archivePath, CompressionFormatEnum& archiveCompressionFormat, ProgressNotifier* notifier = nullptr);
-	bool GetNumberOfItems(const Library& library, const TString& archivePath, CompressionFormatEnum& format, size_t& itemCount, ProgressNotifier* notifier = nullptr);
-	bool GetItemsNames(const Library& library, const TString& archivePath, CompressionFormatEnum& format, size_t& itemCount, std::vector<TString>& itemnames, std::vector<size_t>& origsizes, ProgressNotifier* notifier = nullptr);
-
-	TString ExtensionFromCompressionFormat(const CompressionFormatEnum& format);
-	CompressionFormatEnum CompressionFormatFromExtension(const TString& extWithDot);
+	TString ExtensionFromCompressionFormat(CompressionFormat format);
+	CompressionFormat CompressionFormatFromExtension(const TString& extWithDot);
 }

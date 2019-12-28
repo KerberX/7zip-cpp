@@ -10,15 +10,7 @@
 
 namespace SevenZip::Callback
 {
-	UpdateArchive::UpdateArchive(const TString& dirPrefix, const std::vector<FilePathInfo>& filePaths, const std::vector<TString>& inArchiveFilePaths, const TString& outputFilePath, ProgressNotifier* callback)
-		:m_RefCount(*this), m_DirectoryPrefix(dirPrefix), m_FilePaths(filePaths), m_ArchiveRelativeFilePaths(inArchiveFilePaths), m_OutputPath(outputFilePath), m_ProgressNotifier(callback)
-	{
-	}
-	UpdateArchive::~UpdateArchive()
-	{
-	}
-
-	STDMETHODIMP UpdateArchive::QueryInterface(REFIID iid, void** ppvObject)
+	STDMETHODIMP UpdateArchiveBase::QueryInterface(REFIID iid, void** ppvObject)
 	{
 		if (iid == __uuidof(IUnknown))
 		{
@@ -51,7 +43,7 @@ namespace SevenZip::Callback
 		return E_NOINTERFACE;
 	}
 
-	STDMETHODIMP UpdateArchive::SetTotal(UInt64 size)
+	STDMETHODIMP UpdateArchiveBase::SetTotal(UInt64 size)
 	{
 		if (m_ProgressNotifier)
 		{
@@ -59,7 +51,7 @@ namespace SevenZip::Callback
 		}
 		return S_OK;
 	}
-	STDMETHODIMP UpdateArchive::SetCompleted(const UInt64* completeValue)
+	STDMETHODIMP UpdateArchiveBase::SetCompleted(const UInt64* completeValue)
 	{
 		if (m_ProgressNotifier)
 		{
@@ -72,7 +64,7 @@ namespace SevenZip::Callback
 		return S_OK;
 	}
 
-	STDMETHODIMP UpdateArchive::GetUpdateItemInfo(UInt32 index, Int32* newData, Int32* newProperties, UInt32* indexInArchive)
+	STDMETHODIMP UpdateArchiveBase::GetUpdateItemInfo(UInt32 index, Int32* newData, Int32* newProperties, UInt32* indexInArchive)
 	{
 		// Setting info for Create mode (vs. Append mode).
 		// TODO: support append mode
@@ -101,7 +93,7 @@ namespace SevenZip::Callback
 
 		return S_OK;
 	}
-	STDMETHODIMP UpdateArchive::GetProperty(UInt32 index, PROPID propID, PROPVARIANT* value)
+	STDMETHODIMP UpdateArchiveBase::GetProperty(UInt32 index, PROPID propID, PROPVARIANT* value)
 	{
 		VariantProperty prop;
 
@@ -120,7 +112,7 @@ namespace SevenZip::Callback
 			return E_INVALIDARG;
 		}
 
-		const FilePathInfo& fileInfo = m_FilePaths.at(index);
+		const FilePathInfo& fileInfo = m_FilePaths[index];
 		switch (propID)
 		{
 			case kpidPath:
@@ -166,14 +158,14 @@ namespace SevenZip::Callback
 		}
 		return E_INVALIDARG;
 	}
-	STDMETHODIMP UpdateArchive::GetStream(UInt32 index, ISequentialInStream** inStream)
+	STDMETHODIMP UpdateArchiveBase::GetStream(UInt32 index, ISequentialInStream** inStream)
 	{
 		if (index >= m_FilePaths.size())
 		{
 			return E_INVALIDARG;
 		}
 
-		const FilePathInfo& fileInfo = m_FilePaths.at(index);
+		const FilePathInfo& fileInfo = m_FilePaths[index];
 		if (fileInfo.IsDirectory)
 		{
 			return S_OK;
@@ -192,12 +184,12 @@ namespace SevenZip::Callback
 
 		return S_OK;
 	}
-	STDMETHODIMP UpdateArchive::SetOperationResult(Int32 operationResult)
+	STDMETHODIMP UpdateArchiveBase::SetOperationResult(Int32 operationResult)
 	{
 		return S_OK;
 	}
 
-	STDMETHODIMP UpdateArchive::CryptoGetTextPassword2(Int32* passwordIsDefined, BSTR* password)
+	STDMETHODIMP UpdateArchiveBase::CryptoGetTextPassword2(Int32* passwordIsDefined, BSTR* password)
 	{
 		// TODO: support passwords
 		*passwordIsDefined = 0;
@@ -205,7 +197,7 @@ namespace SevenZip::Callback
 		return *password != _T('\0') ? S_OK : E_OUTOFMEMORY;
 	}
 
-	STDMETHODIMP UpdateArchive::SetRatioInfo(const UInt64* inSize, const UInt64* outSize)
+	STDMETHODIMP UpdateArchiveBase::SetRatioInfo(const UInt64* inSize, const UInt64* outSize)
 	{
 		return S_OK;
 	}

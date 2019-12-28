@@ -25,6 +25,7 @@ namespace SevenZip::Callback
 			~OpenArchive();
 
 		public:
+			STDMETHOD(QueryInterface)(REFIID iid, void** ppvObject);
 			STDMETHOD_(ULONG, AddRef)() override
 			{
 				return m_RefCount.AddRef();
@@ -33,7 +34,6 @@ namespace SevenZip::Callback
 			{
 				return m_RefCount.Release();
 			}
-			STDMETHOD(QueryInterface)(REFIID iid, void** ppvObject);
 
 			// IArchiveOpenCallback
 			STDMETHOD(SetTotal)(const UInt64* files, const UInt64* bytes);

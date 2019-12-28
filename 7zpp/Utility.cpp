@@ -1,24 +1,14 @@
 #include "stdafx.h"
 #include "Utility.h"
+#include "SevenZipLibrary.h"
 #include "VariantProperty.h"
 #include "ProgressNotifier.h"
+#include "FileSystem.h"
 #include "Common.h"
-#include "Enum.h"
 
 namespace SevenZip::Utility
 {
-	TString& MakeLower(TString& string)
-	{
-		::CharLowerBuff(string.data(), (DWORD)string.length());
-		return string;
-	}
-	TString& MakeUpper(TString& string)
-	{
-		::CharUpperBuff(string.data(), (DWORD)string.length());
-		return string;
-	}
-	
-	std::optional<GUID> GetCompressionGUID(const CompressionFormatEnum& format)
+	std::optional<GUID> GetCompressionGUID(CompressionFormat format)
 	{
 		switch (format)
 		{
@@ -70,7 +60,7 @@ namespace SevenZip::Utility
 		return CLSID_CFormat7z;
 	}
 	
-	CComPtr<IInArchive> GetArchiveReader(const Library& library, const CompressionFormatEnum& format)
+	CComPtr<IInArchive> GetArchiveReader(const Library& library, CompressionFormat format)
 	{
 		if (auto guid = GetCompressionGUID(format))
 		{
@@ -78,7 +68,7 @@ namespace SevenZip::Utility
 		}
 		return nullptr;
 	}
-	CComPtr<IOutArchive> GetArchiveWriter(const Library& library, const CompressionFormatEnum& format)
+	CComPtr<IOutArchive> GetArchiveWriter(const Library& library, CompressionFormat format)
 	{
 		if (auto guid = GetCompressionGUID(format))
 		{
@@ -87,180 +77,80 @@ namespace SevenZip::Utility
 		return nullptr;
 	}
 	
-	bool GetNumberOfItems(const Library& library, const TString& archivePath, CompressionFormatEnum& format, size_t& itemCount, ProgressNotifier* notifier)
-	{
-		auto fileStream = FileSystem::OpenFileToRead(archivePath);
-		if (!fileStream)
-		{
-			return false;
-		}
-
-		auto archive = Utility::GetArchiveReader(library, format);
-		auto inFile = CreateObject<InStreamWrapper>(fileStream, notifier);
-		auto openCallback = CreateObject<Callback::OpenArchive>(notifier);
-
-		HRESULT hr = archive->Open(inFile, nullptr, openCallback);
-		if (hr != S_OK)
-		{
-			return false;
-		}
-		
-		if (notifier)
-		{
-			notifier->OnMajorProgress(_T("Getting number of items"), 0);
-		}
-
-		UInt32 itemCount32;
-		hr = archive->GetNumberOfItems(&itemCount32);
-		if (hr != S_OK)
-		{
-			return false;
-		}
-
-		itemCount = itemCount32;
-		archive->Close();
-		return true;
-	}
-	bool GetItemsNames(const Library& library, const TString& archivePath, CompressionFormatEnum& format, size_t& itemCount, std::vector<TString>& itemnames, std::vector<size_t>& origsizes, ProgressNotifier* notifier)
-	{
-		auto fileStream = FileSystem::OpenFileToRead(archivePath);
-		if (!fileStream)
-		{
-			return false;
-		}
-
-		auto archive = Utility::GetArchiveReader(library, format);
-		auto inFile = CreateObject<InStreamWrapper>(fileStream, notifier);
-		auto openCallback = CreateObject<Callback::OpenArchive>(notifier);
-
-		HRESULT hr = archive->Open(inFile, nullptr, openCallback);
-		if (hr != S_OK)
-		{
-			return false;
-		}
-
-		UInt32 itemCount32;
-		hr = archive->GetNumberOfItems(&itemCount32);
-		if (hr != S_OK)
-		{
-			return false;
-		}
-		itemCount = itemCount32;
-
-		itemnames.clear();
-		itemnames.resize(itemCount);
-
-		origsizes.clear();
-		origsizes.resize(itemCount);
-
-		if (notifier)
-		{
-			notifier->OnStartWithTotal(_T("Enumerating item names"), itemCount);
-		}
-
-		for (UInt32 i = 0; i < itemCount; i++)
-		{
-			// Get uncompressed size of file
-			VariantProperty prop;
-			hr = archive->GetProperty(i, kpidSize, &prop);
-			if (hr != S_OK)
-			{
-				return false;
-			}
-
-			origsizes[i] = prop.intVal;
-
-			// Get name of file
-			hr = archive->GetProperty(i, kpidPath, &prop);
-			if (hr != S_OK)
-			{
-				return false;
-			}
-
-			// Valid string? Pass back the found value and call the callback function if set
-			if (prop.vt == VT_BSTR)
-			{
-				const wchar_t* path = prop.bstrVal;
-				itemnames[i] = path;
-			}
-
-			if (notifier)
-			{
-				notifier->OnMajorProgress(itemnames[i], i);
-				if (notifier->ShouldStop())
-				{
-					return false;
-				}
-			}
-		}
-
-		archive->Close();
-		return true;
-	}
-	
-	bool DetectCompressionFormat(const Library& library, const TString& archivePath, CompressionFormatEnum& archiveCompressionFormat, ProgressNotifier* notifier)
+	CompressionFormat GetCompressionFormat(const Library& library, const TString& archivePath, ProgressNotifier* notifier)
 	{
 		// Add more formats here if 7zip supports more formats in the future
-		std::vector<CompressionFormatEnum> availableFormats;
+		CompressionFormat availableFormats[] =
+		{
+			CompressionFormat::Unknown,
+			CompressionFormat::SevenZip,
+			CompressionFormat::Zip,
+			CompressionFormat::Rar,
+			CompressionFormat::Rar,
+			CompressionFormat::Rar5,
+			CompressionFormat::Cab,
+			CompressionFormat::Iso,
+			CompressionFormat::GZip,
+			CompressionFormat::BZip2,
+			CompressionFormat::Tar,
+			CompressionFormat::Lzma,
+			CompressionFormat::Lzma86,
+		};
 
 		// Add most believable by scanning file extension
-		size_t dotPos = archivePath.rfind(_T('.'));
+		const size_t dotPos = archivePath.rfind(_T('.'));
 		if (dotPos != TString::npos)
 		{
-			auto format = CompressionFormatFromExtension(archivePath.substr(dotPos));
-			if (format != CompressionFormat::Unknown)
-			{
-				availableFormats.push_back(format);
-			}
+			availableFormats[0] = CompressionFormatFromExtension(archivePath.substr(dotPos));
 		}
-
-		availableFormats.emplace_back(CompressionFormat::SevenZip);
-		availableFormats.emplace_back(CompressionFormat::Zip);
-		availableFormats.emplace_back(CompressionFormat::Rar);
-		availableFormats.emplace_back(CompressionFormat::Rar5);
-		availableFormats.emplace_back(CompressionFormat::GZip);
-		availableFormats.emplace_back(CompressionFormat::BZip2);
-		availableFormats.emplace_back(CompressionFormat::Tar);
-		availableFormats.emplace_back(CompressionFormat::Lzma);
-		availableFormats.emplace_back(CompressionFormat::Lzma86);
-		availableFormats.emplace_back(CompressionFormat::Cab);
-		availableFormats.emplace_back(CompressionFormat::Iso);
 
 		if (notifier)
 		{
-			notifier->OnStartWithTotal(_T(""), availableFormats.size());
+			notifier->OnStartWithTotal(_T(""), std::size(availableFormats));
 		}
 
 		// Check each format for one that works
-		for (size_t i = 0; i < availableFormats.size(); i++)
+		int64_t counter = 0;
+		for (const CompressionFormat format: availableFormats)
 		{
-			CComPtr<IStream> fileStream = FileSystem::OpenFileToRead(archivePath);
-			if (!fileStream)
+			if (format != CompressionFormat::Unknown)
 			{
-				return false;
-			}
-
-			if (notifier)
-			{
-				notifier->OnMajorProgress(_T("Detecting format. Trying ") + availableFormats[i].GetString(), i);
-				if (notifier->ShouldStop())
+				// Skip the same format as the one added by the file extension as we already tested for it
+				if (counter != 0 && format == availableFormats[0])
 				{
-					return false;
+					continue;
+				}
+
+				if (notifier)
+				{
+					notifier->OnMajorProgress(String::Format(_T("Detecting format. Trying %d"), static_cast<int>(format)), counter);
+					if (notifier->ShouldStop())
+					{
+						return CompressionFormat::Unknown;
+					}
+				}
+
+				auto fileStream = FileSystem::OpenFileToRead(archivePath);
+				if (!fileStream)
+				{
+					return CompressionFormat::Unknown;
+				}
+
+				auto archive = Utility::GetArchiveReader(library, format);
+				CallAtExit atExit([&]()
+				{
+					archive->Close();
+				});
+				InStreamWrapper inFile(fileStream, notifier);
+				Callback::OpenArchive openCallback(notifier);
+
+				if (SUCCEEDED(archive->Open(&inFile, nullptr, &openCallback)))
+				{
+					// We know the format if we get here, so return
+					return format;
 				}
 			}
-
-			archiveCompressionFormat = availableFormats[i];
-			auto archive = Utility::GetArchiveReader(library, archiveCompressionFormat);
-			auto inFile = CreateObject<InStreamWrapper>(fileStream, notifier);
-			auto openCallback = CreateObject<Callback::OpenArchive>(notifier);
-
-			HRESULT hr = archive->Open(inFile, nullptr, openCallback);
-			archive->Close();
-			if (hr == S_OK)
-			{
-				// We know the format if we get here, so return
-				return true;
-			}
+			counter++;
 		}
 
 		// There is a problem that GZip files will not be detected using the above method. This is a fix.
@@ -268,24 +158,159 @@ namespace SevenZip::Utility
 		{
 			if (notifier && notifier->ShouldStop())
 			{
-				return false;
+				return CompressionFormat::Unknown;
 			}
 
 			size_t itemCount = 0;
-			archiveCompressionFormat = CompressionFormat::GZip;
-			bool result = GetNumberOfItems(library, archivePath, archiveCompressionFormat, itemCount);
-			if (result && itemCount > 0)
+			if (GetNumberOfItems(library, archivePath, CompressionFormat::GZip, itemCount, notifier) && itemCount != 0)
 			{
 				// We know this file is a GZip file, so return
-				return true;
+				return CompressionFormat::GZip;
 			}
 		}
 
 		// If we get here, the format is unknown
-		archiveCompressionFormat = CompressionFormat::Unknown;
-		return true;
+		return CompressionFormat::Unknown;
 	}
-	TString ExtensionFromCompressionFormat(const CompressionFormatEnum& format)
+	bool GetNumberOfItems(const Library& library, const TString& archivePath, CompressionFormat format, size_t& itemCount, ProgressNotifier* notifier)
+	{
+		if (auto fileStream = FileSystem::OpenFileToRead(archivePath))
+		{
+			auto archive = Utility::GetArchiveReader(library, format);
+			CallAtExit atExit([&]()
+			{
+				archive->Close();
+			});
+			InStreamWrapper inFile(fileStream, notifier);
+			Callback::OpenArchive openCallback(notifier);
+
+			if (FAILED(archive->Open(&inFile, nullptr, &openCallback)))
+			{
+				return false;
+			}
+			if (notifier)
+			{
+				notifier->OnMajorProgress(_T("Getting number of items"), 0);
+			}
+
+			UInt32 itemCount32 = 0;
+			if (FAILED(archive->GetNumberOfItems(&itemCount32)))
+			{
+				return false;
+			}
+			itemCount = itemCount32;
+			return true;
+		}
+		return false;
+	}
+	bool GetArchiveItems(const Library& library, const TString& archivePath, CompressionFormat format, FileInfo::Vector& items, ProgressNotifier* notifier)
+	{
+		if (auto fileStream = FileSystem::OpenFileToRead(archivePath))
+		{
+			auto archive = Utility::GetArchiveReader(library, format);
+			CallAtExit atExit([&]()
+			{
+				archive->Close();
+			});
+			InStreamWrapper inFile(fileStream, notifier);
+			Callback::OpenArchive openCallback(notifier);
+
+			if (FAILED(archive->Open(&inFile, nullptr, &openCallback)))
+			{
+				return false;
+			}
+
+			UInt32 itemCount32 = 0;
+			if (FAILED(archive->GetNumberOfItems(&itemCount32)))
+			{
+				return false;
+			}
+			items.reserve(itemCount32);
+
+			if (notifier)
+			{
+				notifier->OnStartWithTotal(_T("Enumerating items"), itemCount32);
+			}
+
+			for (UInt32 i = 0; i < itemCount32; i++)
+			{
+				FileInfo fileItem;
+				VariantProperty property;
+
+				// Get name of file
+				if (FAILED(archive->GetProperty(i, kpidPath, &property)))
+				{
+					return false;
+				}
+				fileItem.FileName = property.ToString().value_or(TString());
+
+				// Original size
+				if (FAILED(archive->GetProperty(i, kpidSize, &property)))
+				{
+					return false;
+				}
+				fileItem.Size = property.ToInteger<decltype(fileItem.Size)>().value_or(-1);
+
+				// Compressed size
+				if (FAILED(archive->GetProperty(i, kpidPackSize, &property)))
+				{
+					return false;
+				}
+				fileItem.CompressedSize = property.ToInteger<decltype(fileItem.CompressedSize)>().value_or(-1);
+
+				// Attributes
+				if (FAILED(archive->GetProperty(i, kpidAttrib, &property)))
+				{
+					return false;
+				}
+				fileItem.Attributes = property.ToInteger<decltype(fileItem.Attributes)>().value_or(0);
+
+				// Is directory
+				if (FAILED(archive->GetProperty(i, kpidIsDir, &property)))
+				{
+					return false;
+				}
+				fileItem.IsDirectory = property.ToBool().value_or(false);
+
+				// Creation time
+				if (FAILED(archive->GetProperty(i, kpidCTime, &property)))
+				{
+					return false;
+				}
+				fileItem.CreationTime = property.ToFileTime().value_or(FILETIME());
+
+				// Modification time
+				if (FAILED(archive->GetProperty(i, kpidMTime, &property)))
+				{
+					return false;
+				}
+				fileItem.LastWriteTime = property.ToFileTime().value_or(FILETIME());
+
+				// Last access time
+				if (FAILED(archive->GetProperty(i, kpidATime, &property)))
+				{
+					return false;
+				}
+				fileItem.LastAccessTime = property.ToFileTime().value_or(FILETIME());
+
+				// Notify callback
+				if (notifier)
+				{
+					notifier->OnMajorProgress(fileItem.FileName, i);
+					if (notifier->ShouldStop())
+					{
+						return false;
+					}
+				}
+
+				// Add the item
+				items.emplace_back(std::move(fileItem));
+			}
+		}
+		return false;
+	}
+
+	TString ExtensionFromCompressionFormat(CompressionFormat format)
 	{
 		switch (format)
 		{
@@ -334,9 +359,9 @@ namespace SevenZip::Utility
 		}
 		return {};
 	}
-	CompressionFormatEnum CompressionFormatFromExtension(const TString& extWithDot)
+	CompressionFormat CompressionFormatFromExtension(const TString& extWithDot)
 	{
-		TString ext = ToLower(extWithDot);
+		TString ext = String::ToLower(extWithDot);
 		if (ext == _T(".7z"))
 		{
 			return CompressionFormat::SevenZip;

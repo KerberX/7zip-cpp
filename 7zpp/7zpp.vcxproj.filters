@@ -38,19 +38,16 @@
     <ClCompile Include="VariantProperty.cpp">
       <Filter>Source files\Misc</Filter>
     </ClCompile>
-    <ClCompile Include="CompressionFormat.cpp">
-      <Filter>Source files\Enums</Filter>
-    </ClCompile>
     <ClCompile Include="FileSystem.cpp">
       <Filter>Source files\Utility</Filter>
+    </ClCompile>
+    <ClCompile Include="SevenString.cpp">
+      <Filter>Source files\Misc</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Include\7zpp\7zpp.h">
       <Filter>Includes</Filter>
-    </ClInclude>
-    <ClInclude Include="7zpp.h">
-      <Filter>Header files</Filter>
     </ClInclude>
     <ClInclude Include="ArchiveExtractCallback.h">
       <Filter>Header files\Callback</Filter>
@@ -94,15 +91,6 @@
     <ClInclude Include="VariantProperty.h">
       <Filter>Header files\Misc</Filter>
     </ClInclude>
-    <ClInclude Include="CompressionFormat.h">
-      <Filter>Header files\Enums</Filter>
-    </ClInclude>
-    <ClInclude Include="CompressionLevel.h">
-      <Filter>Header files\Enums</Filter>
-    </ClInclude>
-    <ClInclude Include="Enum.h">
-      <Filter>Header files\Enums</Filter>
-    </ClInclude>
     <ClInclude Include="SevenZipArchive.h">
       <Filter>Header files</Filter>
     </ClInclude>
@@ -124,6 +112,15 @@
     <ClInclude Include="COM.h">
       <Filter>Header files\Utility</Filter>
     </ClInclude>
+    <ClInclude Include="Stream.h">
+      <Filter>Header files\Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="BaseInclude.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Include\7zpp\7zppEx.h">
+      <Filter>Includes</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Includes">
@@ -134,12 +131,6 @@
     </Filter>
     <Filter Include="Source files">
       <UniqueIdentifier>{a95ea252-a1de-4a69-8282-535be5202310}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Header files\Enums">
-      <UniqueIdentifier>{5667a8d7-1647-4890-8a47-0fe326c1ebc6}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source files\Enums">
-      <UniqueIdentifier>{9d09e086-a180-47ee-a7c9-5e6bb6740853}</UniqueIdentifier>
     </Filter>
     <Filter Include="Header files\Utility">
       <UniqueIdentifier>{46e39498-50ae-430f-91e6-b8a12bff7b08}</UniqueIdentifier>

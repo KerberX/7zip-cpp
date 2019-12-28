@@ -5,18 +5,6 @@
 
 namespace SevenZip
 {
-	InStreamWrapper::InStreamWrapper(ProgressNotifier* notifier)
-		:m_ProgressNotifier(notifier)
-	{
-	}
-	InStreamWrapper::InStreamWrapper(const CComPtr<IStream>& baseStream, ProgressNotifier* notifier)
-		: m_BaseStream(baseStream), m_ProgressNotifier(notifier)
-	{
-	}
-	InStreamWrapper::~InStreamWrapper()
-	{
-	}
-
 	HRESULT STDMETHODCALLTYPE InStreamWrapper::QueryInterface(REFIID iid, void** ppvObject)
 	{
 		if (iid == __uuidof(IUnknown))
@@ -49,26 +37,13 @@ namespace SevenZip
 
 		return E_NOINTERFACE;
 	}
-	ULONG STDMETHODCALLTYPE InStreamWrapper::AddRef()
-	{
-		return static_cast<ULONG>(InterlockedIncrement(&m_RefCount));
-	}
-	ULONG STDMETHODCALLTYPE InStreamWrapper::Release()
-	{
-		ULONG res = static_cast<ULONG>(InterlockedDecrement(&m_RefCount));
-		if (res == 0)
-		{
-			delete this;
-		}
-		return res;
-	}
 
 	STDMETHODIMP InStreamWrapper::Read(void* data, UInt32 size, UInt32* processedSize)
 	{
-		if (m_ProgressNotifier)
+		if (m_Notifier)
 		{
-			m_ProgressNotifier->OnMinorProgress(m_FilePath, m_CurrentPos, m_StreamSize);
-			if (m_ProgressNotifier->ShouldStop())
+			m_Notifier->OnMinorProgress(m_FilePath, m_CurrentPos, m_StreamSize);
+			if (m_Notifier->ShouldStop())
 			{
 				return HRESULT_FROM_WIN32(ERROR_CANCELLED);
 			}

@@ -118,6 +118,75 @@ namespace SevenZip
 			HRESULT Attach(PROPVARIANT& source);
 			HRESULT Detach(PROPVARIANT& destination);
 
+			template<class T = int>
+			std::optional<T> ToInteger() const
+			{
+				switch (vt)
+				{
+					case VT_I1:
+					{
+						return static_cast<T>(cVal);
+					}
+					case VT_UI1:
+					{
+						return static_cast<T>(bVal);
+					}
+
+					case VT_I2:
+					{
+						return static_cast<T>(iVal);
+					}
+					case VT_UI2:
+					{
+						return static_cast<T>(uiVal);
+					}
+
+					case VT_I4:
+					{
+						return static_cast<T>(lVal);
+					}
+					case VT_UI4:
+					{
+						return static_cast<T>(ulVal);
+					}
+
+					case VT_I8:
+					{
+						return static_cast<T>(hVal.QuadPart);
+					}
+					case VT_UI8:
+					{
+						return static_cast<T>(uhVal.QuadPart);
+					}
+				};
+				return std::nullopt;
+			}
+			
+			std::optional<bool> ToBool() const
+			{
+				if (vt == VT_BOOL)
+				{
+					return boolVal != VARIANT_FALSE;
+				}
+				return std::nullopt;
+			}
+			std::optional<TString> ToString() const
+			{
+				if (vt == VT_BSTR)
+				{
+					return bstrVal;
+				}
+				return std::nullopt;
+			}
+			std::optional<FILETIME> ToFileTime() const
+			{
+				if (vt == VT_FILETIME)
+				{
+					return filetime;
+				}
+				return std::nullopt;
+			}
+
 		public:
 			VariantProperty& operator=(const VariantProperty& value)
 			{

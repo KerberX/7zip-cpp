@@ -13,6 +13,7 @@ namespace SevenZip
 		FILETIME CreationTime = {};
 		FILETIME LastAccessTime = {};
 		int64_t Size = -1;
+		int64_t CompressedSize = -1;
 		uint32_t Attributes = 0;
 		bool IsDirectory = false;
 	};
