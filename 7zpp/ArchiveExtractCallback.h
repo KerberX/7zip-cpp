@@ -93,6 +93,7 @@ namespace SevenZip::Callback
 			size_t m_FilesCount = 0;
 
 		public:
+			FileExtractor() = default;
 			FileExtractor(const TString& directory, ProgressNotifier* notifier = nullptr)
 				:Extractor(notifier), m_Directory(directory)
 			{
