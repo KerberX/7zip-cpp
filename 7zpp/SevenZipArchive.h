@@ -16,8 +16,6 @@ namespace SevenZip
 
 namespace SevenZip
 {
-	using FileIndexVector = std::vector<uint32_t>;
-
 	class Archive
 	{
 		protected:
@@ -161,7 +159,7 @@ namespace SevenZip
 
 			// Extract only specified files into corresponding files path.
 			// Each file at index to the same file in 'finalPaths' vector.
-			bool ExtractArchive(const FileIndexVector& files, const TStringVector& finalPaths) const;
+			bool ExtractArchive(const FileIndexToPathMap& files) const;
 	
 		public:
 			// Includes the last directory as the root in the archive, e.g. specifying "C:\Temp\MyFolder"

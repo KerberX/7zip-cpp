@@ -220,15 +220,15 @@ namespace SevenZip
 		auto extractor = CreateObject<Callback::FileExtractor>(directory, m_Notifier);
 		return DoExtract(files, extractor.Detach());
 	}
-	bool Archive::ExtractArchive(const FileIndexVector& files, const TStringVector& finalPaths) const
+	bool Archive::ExtractArchive(const FileIndexToPathMap& files) const
 	{
 		class ExtractToPaths: public Callback::FileExtractor
 		{
 			private:
-				const TStringVector& m_TargetPaths;
+				const FileIndexToPathMap& m_TargetPaths;
 
 			public:
-				ExtractToPaths(const TStringVector& targetPaths, ProgressNotifier* notifier = nullptr)
+				ExtractToPaths(const FileIndexToPathMap& targetPaths, ProgressNotifier* notifier = nullptr)
 					:FileExtractor({}, notifier), m_TargetPaths(targetPaths)
 				{
 				}
@@ -236,17 +236,26 @@ namespace SevenZip
 			public:
 				HRESULT GetTargetPath(const UInt32 index, const TString& ralativePath, TString& targetPath) const override
 				{
-					if (index < m_TargetPaths.size())
+					auto it = m_TargetPaths.find(index);
+					if (it != m_TargetPaths.end())
 					{
-						targetPath = m_TargetPaths[index];
+						targetPath = it->second;
 						return S_OK;
 					}
 					return E_INVALIDARG;
 				}
 		};
 
-		auto extractor = CreateObject<ExtractToPaths>(finalPaths, m_Notifier);
-		return DoExtract(files, extractor.Detach());
+		auto extractor = CreateObject<ExtractToPaths>(files, m_Notifier);
+
+		FileIndexVector fileIndex;
+		fileIndex.reserve(files.size());
+		for (const auto& [index, path]: files)
+		{
+			fileIndex.push_back(index);
+		}
+
+		return DoExtract(fileIndex, extractor.Detach());
 	}
 
 	// Compression

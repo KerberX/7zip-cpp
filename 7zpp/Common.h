@@ -4,6 +4,10 @@
 
 namespace SevenZip
 {
+	using FileIndex = uint32_t;
+	using FileIndexVector = std::vector<FileIndex>;
+	using FileIndexToPathMap = std::unordered_map<FileIndex, TString>;
+
 	enum class CompressionMethod
 	{
 		Unknown = -1,
