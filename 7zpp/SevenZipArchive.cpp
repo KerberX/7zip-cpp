@@ -125,24 +125,28 @@ namespace SevenZip
 		return m_IsLoaded;
 	}
 
-	bool Archive::DoExtract(const FileIndexVector& files, Callback::Extractor& extractor) const
+	bool Archive::DoExtract(const FileIndexVector& files, const CComPtr<Callback::Extractor>& extractor) const
 	{
 		if (auto fileStream = FileSystem::OpenFileToRead(m_ArchivePath))
 		{
 			auto archive = Utility::GetArchiveReader(*m_Library, m_Property_CompressionFormat);
-			InStreamWrapper inFile(fileStream, m_Notifier);
-			Callback::OpenArchive openCallback(m_Notifier);
+			auto inFile = CreateObject<InStreamWrapper>(fileStream, m_Notifier);
+			auto openCallback = CreateObject<Callback::OpenArchive>(m_Notifier);
 
-			if (SUCCEEDED(archive->Open(&inFile, nullptr, &openCallback)))
+			if (SUCCEEDED(archive->Open(inFile, nullptr, openCallback)))
 			{
+				CallAtExit atExit([&]()
+				{
+					archive->Close();
+				});
+
 				const uint32_t* indexData = !files.empty() ? files.data() : nullptr;
 				const uint32_t indexSize = !files.empty() ? static_cast<uint32_t>(files.size()) : std::numeric_limits<uint32_t>::max();
 
-				extractor.SetArchive(archive);
-				extractor.SetNotifier(m_Notifier);
-				if (SUCCEEDED(archive->Extract(indexData, indexSize, false, &extractor)))
+				extractor->SetArchive(archive);
+				extractor->SetNotifier(m_Notifier);
+				if (SUCCEEDED(archive->Extract(indexData, indexSize, false, extractor)))
 				{
-					archive->Close();
 					if (m_Notifier)
 					{
 						m_Notifier->OnDone();
@@ -150,8 +154,6 @@ namespace SevenZip
 					return true;
 				}
 			}
-
-			archive->Close();
 		}
 		return false;
 	}
@@ -180,7 +182,7 @@ namespace SevenZip
 		auto updateCallback = CreateObject<Callback::UpdateArchiveBase>(pathPrefix, filePaths, inArchiveFilePaths, m_ArchivePath, m_Notifier);
 		updateCallback->SetExistingItemsCount(m_Items.size());
 
-		if (SUCCEEDED(archiveWriter->UpdateItems(outFile, (UInt32)filePaths.size(), updateCallback)))
+		if (SUCCEEDED(archiveWriter->UpdateItems(outFile, static_cast<UInt32>(filePaths.size()), updateCallback)))
 		{
 			if (m_Notifier)
 			{
@@ -194,7 +196,7 @@ namespace SevenZip
 	bool Archive::Load(TStringView filePath)
 	{
 		// Clear metadata
-		*this = std::move(Archive(*m_Library));
+		*this = std::move(Archive(*m_Library, m_Notifier));
 
 		// Load new archive
 		m_ArchivePath = filePath;
@@ -204,19 +206,19 @@ namespace SevenZip
 	}
 	
 	// Extraction
-	bool Archive::ExtractArchive(const FileIndexVector& files, Callback::Extractor& extractor) const
+	bool Archive::ExtractArchive(const FileIndexVector& files, const CComPtr<Callback::Extractor>& extractor) const
 	{
 		return DoExtract(files, extractor);
 	}
 	bool Archive::ExtractArchive(const TString& directory) const
 	{
-		Callback::FileExtractor extractor(directory, m_Notifier);
-		return DoExtract({}, extractor);
+		auto extractor = CreateObject<Callback::FileExtractor>(directory, m_Notifier);
+		return DoExtract({}, extractor.Detach());
 	}
 	bool Archive::ExtractArchive(const FileIndexVector& files, const TString& directory) const
 	{
-		Callback::FileExtractor extractor(directory, m_Notifier);
-		return DoExtract(files, extractor);
+		auto extractor = CreateObject<Callback::FileExtractor>(directory, m_Notifier);
+		return DoExtract(files, extractor.Detach());
 	}
 	bool Archive::ExtractArchive(const FileIndexVector& files, const TStringVector& finalPaths) const
 	{
@@ -243,8 +245,8 @@ namespace SevenZip
 				}
 		};
 
-		ExtractToPaths extractor(finalPaths, m_Notifier);
-		return DoExtract(files, extractor);
+		auto extractor = CreateObject<ExtractToPaths>(finalPaths, m_Notifier);
+		return DoExtract(files, extractor.Detach());
 	}
 
 	// Compression

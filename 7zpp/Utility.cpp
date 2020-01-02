@@ -141,10 +141,10 @@ namespace SevenZip::Utility
 				{
 					archive->Close();
 				});
-				InStreamWrapper inFile(fileStream, notifier);
-				Callback::OpenArchive openCallback(notifier);
+				auto inFile = CreateObject<InStreamWrapper>(fileStream, notifier);
+				auto openCallback = CreateObject<Callback::OpenArchive>(notifier);
 
-				if (SUCCEEDED(archive->Open(&inFile, nullptr, &openCallback)))
+				if (archive->Open(inFile, nullptr, openCallback) == S_OK)
 				{
 					// We know the format if we get here, so return
 					return format;
@@ -181,10 +181,10 @@ namespace SevenZip::Utility
 			{
 				archive->Close();
 			});
-			InStreamWrapper inFile(fileStream, notifier);
-			Callback::OpenArchive openCallback(notifier);
+			auto inFile = CreateObject<InStreamWrapper>(fileStream, notifier);
+			auto openCallback = CreateObject<Callback::OpenArchive>(notifier);
 
-			if (FAILED(archive->Open(&inFile, nullptr, &openCallback)))
+			if (FAILED(archive->Open(inFile, nullptr, openCallback)))
 			{
 				return false;
 			}
@@ -194,7 +194,7 @@ namespace SevenZip::Utility
 			}
 
 			UInt32 itemCount32 = 0;
-			if (FAILED(archive->GetNumberOfItems(&itemCount32)))
+			if (archive->GetNumberOfItems(&itemCount32) != S_OK)
 			{
 				return false;
 			}
@@ -212,16 +212,16 @@ namespace SevenZip::Utility
 			{
 				archive->Close();
 			});
-			InStreamWrapper inFile(fileStream, notifier);
-			Callback::OpenArchive openCallback(notifier);
+			auto inFile = CreateObject<InStreamWrapper>(fileStream, notifier);
+			auto openCallback = CreateObject<Callback::OpenArchive>(notifier);
 
-			if (FAILED(archive->Open(&inFile, nullptr, &openCallback)))
+			if (FAILED(archive->Open(inFile, nullptr, openCallback)))
 			{
 				return false;
 			}
 
 			UInt32 itemCount32 = 0;
-			if (FAILED(archive->GetNumberOfItems(&itemCount32)))
+			if (archive->GetNumberOfItems(&itemCount32) != S_OK)
 			{
 				return false;
 			}
@@ -306,6 +306,7 @@ namespace SevenZip::Utility
 				// Add the item
 				items.emplace_back(std::move(fileItem));
 			}
+			return true;
 		}
 		return false;
 	}

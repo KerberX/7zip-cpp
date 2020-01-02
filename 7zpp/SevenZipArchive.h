@@ -45,7 +45,7 @@ namespace SevenZip
 			bool InitMetadata();
 
 		protected:
-			bool DoExtract(const FileIndexVector& files, Callback::Extractor& extractor) const;
+			bool DoExtract(const FileIndexVector& files, const CComPtr<Callback::Extractor>& extractor) const;
 			bool FindAndCompressFiles(const TString& directory, const TString& searchPattern, const TString& pathPrefix, bool recursion);
 			bool CompressFilesToArchive(const TString& pathPrefix, const FilePathInfo::Vector& filePaths, const TStringVector& inArchiveFilePaths);
 
@@ -151,7 +151,7 @@ namespace SevenZip
 		public:
 			// Extracts specified files using provided extractor.
 			// Extract entire archive if no files are specified.
-			bool ExtractArchive(const FileIndexVector& files, Callback::Extractor& extractor) const;
+			bool ExtractArchive(const FileIndexVector& files, const CComPtr<Callback::Extractor>& extractor) const;
 
 			// Extract entire archive into specified directory
 			bool ExtractArchive(const TString& directory) const;
