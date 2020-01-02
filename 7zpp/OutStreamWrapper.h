@@ -55,17 +55,18 @@ namespace SevenZip
 	class OutStreamWrapper: public OutStream
 	{
 		protected:
-			CComPtr<IStream> m_BaseStream;
-			int64_t m_StreamSize = 0;
 			int64_t m_CurrentPosition = 0;
+			int64_t m_StreamSize = 0;
+			bool m_StreamSizeKnown = false;
+
+		protected:
+			virtual HRESULT DoWrite(const void* data, uint32_t size, uint32_t& written) = 0;
+			virtual HRESULT DoSeek(int64_t offset, uint32_t seekMode, int64_t& newPosition) = 0;
+			virtual HRESULT DoSetSize(int64_t size) = 0;
 
 		public:
 			OutStreamWrapper(ProgressNotifier* notifier = nullptr)
 				:OutStream(notifier)
-			{
-			}
-			OutStreamWrapper(const CComPtr<IStream>& baseStream, ProgressNotifier* notifier = nullptr)
-				:OutStream(notifier), m_BaseStream(baseStream)
 			{
 			}
 
@@ -76,19 +77,44 @@ namespace SevenZip
 			// IOutStream
 			STDMETHOD(Seek)(Int64 offset, UInt32 seekOrigin, UInt64* newPosition) override;
 			STDMETHOD(SetSize)(UInt64 newSize) override;
+	};
+
+	class OutStreamWrapper_IStream: public OutStreamWrapper
+	{
+		protected:
+			CComPtr<IStream> m_BaseStream;
+
+		protected:
+			HRESULT DoWrite(const void* data, uint32_t size, uint32_t& written) override
+			{
+				ULONG writtenBase = 0;
+				HRESULT hr = m_BaseStream->Write(data, size, &writtenBase);
+				written = writtenBase;
+
+				return hr;
+			}
+			HRESULT DoSeek(int64_t offset, uint32_t seekMode, int64_t& newPosition) override
+			{
+				LARGE_INTEGER offsetLI = {};
+				offsetLI.QuadPart = offset;
+
+				ULARGE_INTEGER newPositionLI = {};
+				HRESULT hr = m_BaseStream->Seek(offsetLI, seekMode, &newPositionLI);
+				newPosition = newPositionLI.QuadPart;
+
+				return hr;
+			}
+			HRESULT DoSetSize(int64_t size) override
+			{
+				ULARGE_INTEGER value = {};
+				value.QuadPart = size;
+				return m_BaseStream->SetSize(value);
+			}
 
 		public:
-			void SetNotifier(ProgressNotifier* notifier)
+			OutStreamWrapper_IStream(const CComPtr<IStream>& baseStream, ProgressNotifier* notifier = nullptr)
+				:OutStreamWrapper(notifier), m_BaseStream(baseStream)
 			{
-				m_Notifier = notifier;
-			}
-			void SetFilePath(const TString& path)
-			{
-				m_FilePath = path;
-			}
-			void SetStreamSize(int64_t size)
-			{
-				m_StreamSize = size;
 			}
 	};
 }

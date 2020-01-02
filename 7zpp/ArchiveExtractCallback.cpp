@@ -271,6 +271,7 @@ namespace SevenZip::Callback
 				// Creating the directory here supports having empty directories.
 				FileSystem::CreateDirectoryTree(m_TargetPath);
 				*outStream = nullptr;
+
 				return S_OK;
 			}
 
@@ -282,9 +283,9 @@ namespace SevenZip::Callback
 				return HRESULT_FROM_WIN32(GetLastError());
 			}
 
-			auto wrapperStream = CreateObject<OutStreamWrapper>(fileStream, m_Notifier);
+			auto wrapperStream = CreateObject<OutStreamWrapper_IStream>(fileStream, m_Notifier);
 			wrapperStream->SetFilePath(m_TargetPath);
-			wrapperStream->SetStreamSize(m_FileSize.value_or(-1));
+			wrapperStream->SetSize(m_FileSize.value_or(0));
 			*outStream = wrapperStream.Detach();
 
 			return S_OK;

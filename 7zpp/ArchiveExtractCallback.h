@@ -129,12 +129,21 @@ namespace SevenZip::Callback
 
 			// IArchiveExtractCallback
 			STDMETHOD(GetStream)(UInt32 index, ISequentialOutStream** outStream, Int32 askExtractMode) override;
+			STDMETHOD(PrepareOperation)(Int32 askExtractMode)
+			{
+				return S_OK;
+			}
+			STDMETHOD(SetOperationResult)(Int32 resultEOperationResult) override
+			{
+				EmitFileDoneCallback(m_RelativePath);
+				return S_OK;
+			}
 
 		public:
 			virtual CComPtr<OutStream> CreateStream(uint32_t fileIndex, const TString& ralativePath) = 0;
 			virtual HRESULT OnDirectory(uint32_t fileIndex, const TString& ralativePath)
 			{
-				return S_OK;
+				return S_FALSE;
 			}
 	};
 }

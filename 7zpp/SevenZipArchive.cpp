@@ -176,7 +176,7 @@ namespace SevenZip
 		auto archiveWriter = Utility::GetArchiveWriter(*m_Library, m_Property_CompressionFormat);
 		SetCompressionProperties(*archiveWriter, m_Property_MultiThreaded, m_Property_Solid, m_Property_CompressionLevel, m_Property_DictionarySize, m_Property_CompressionMethod);
 
-		auto outFile = CreateObject<OutStreamWrapper>(FileSystem::OpenFileToWrite(m_ArchivePath));
+		auto outFile = CreateObject<OutStreamWrapper_IStream>(FileSystem::OpenFileToWrite(m_ArchivePath));
 		auto updateCallback = CreateObject<Callback::UpdateArchiveBase>(pathPrefix, filePaths, inArchiveFilePaths, m_ArchivePath, m_Notifier);
 		updateCallback->SetExistingItemsCount(m_Items.size());
 

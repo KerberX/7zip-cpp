@@ -45,35 +45,36 @@ namespace SevenZip
 			}
 		}
 
-		ULONG writtenBase = 0;
-		HRESULT hr = m_BaseStream->Write(data, size, &writtenBase);
+		uint32_t writtenBase = 0;
+		HRESULT hr = DoWrite(data, size, writtenBase);
+		m_CurrentPosition += writtenBase;
+
 		if (written)
 		{
-			m_CurrentPosition += writtenBase;
 			*written = writtenBase;
 		}
+		if (!m_StreamSizeKnown)
+		{
+			m_StreamSize += writtenBase;
+		}
+
 		return hr;
 	}
-	
+
 	STDMETHODIMP OutStreamWrapper::Seek(Int64 offset, UInt32 seekOrigin, UInt64* newPosition)
 	{
-		LARGE_INTEGER move = {};
-		move.QuadPart = offset;
-
-		ULARGE_INTEGER newPos = {};
-		HRESULT hr = m_BaseStream->Seek(move, seekOrigin, &newPos);
+		int64_t newPos = 0;
+		HRESULT hr = DoSeek(offset, seekOrigin, newPos);
 		if (newPosition)
 		{
-			*newPosition = newPos.QuadPart;
+			*newPosition = newPos;
 		}
 		return hr;
 	}
 	STDMETHODIMP OutStreamWrapper::SetSize(UInt64 newSize)
 	{
 		m_StreamSize = newSize;
-
-		ULARGE_INTEGER size = {};
-		size.QuadPart = newSize;
-		return m_BaseStream->SetSize(size);
+		m_StreamSizeKnown = true;
+		return DoSetSize(newSize);
 	}
 }
