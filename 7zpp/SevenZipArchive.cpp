@@ -125,7 +125,7 @@ namespace SevenZip
 		return m_IsLoaded;
 	}
 
-	bool Archive::DoExtract(const FileIndexVector& files, const CComPtr<Callback::Extractor>& extractor) const
+	bool Archive::DoExtract(const CComPtr<Callback::Extractor>& extractor, FileIndexView files) const
 	{
 		if (auto fileStream = FileSystem::OpenFileToRead(m_ArchivePath))
 		{
@@ -139,13 +139,34 @@ namespace SevenZip
 				{
 					archive->Close();
 				});
-
-				const uint32_t* indexData = !files.empty() ? files.data() : nullptr;
-				const uint32_t indexSize = !files.empty() ? static_cast<uint32_t>(files.size()) : std::numeric_limits<uint32_t>::max();
-
 				extractor->SetArchive(archive);
 				extractor->SetNotifier(m_Notifier);
-				if (SUCCEEDED(archive->Extract(indexData, indexSize, false, extractor)))
+
+				HRESULT result = E_FAIL;
+				if (!files.empty())
+				{
+					// Process only specified files
+					if (files.size() == 1)
+					{
+						// No need to sort single index
+						result = archive->Extract(files.data(), static_cast<UInt32>(files.size()), false, extractor);
+					}
+					else
+					{
+						// IInArchive::Extract requires sorted array
+						FileIndexVector temp = files.CopyToVector();
+						std::sort(temp.begin(), temp.end());
+
+						result = archive->Extract(temp.data(), static_cast<UInt32>(temp.size()), false, extractor);
+					}
+				}
+				else
+				{
+					// Process all files, the callback will decide which files are needed
+					result = archive->Extract(nullptr, std::numeric_limits<UInt32>::max(), false, extractor);
+				}
+
+				if (SUCCEEDED(result))
 				{
 					if (m_Notifier)
 					{
@@ -157,23 +178,7 @@ namespace SevenZip
 		}
 		return false;
 	}
-	bool Archive::FindAndCompressFiles(const TString& directory, const TString& searchPattern, const TString& pathPrefix, bool recursion)
-	{
-		if (!FileSystem::DirectoryExists(directory) || FileSystem::IsDirectoryEmptyRecursive(directory))
-		{
-			return false;
-		}
-
-		FilePathInfo::Vector files = FileSystem::GetFilesInDirectory(directory, searchPattern.empty() ? AllFilesPattern : searchPattern, recursion);
-		TStringVector relativePaths(files.size(), TString());
-		
-		for (size_t i = 0; i < files.size(); i++)
-		{
-			relativePaths[i] = FileSystem::ExtractRelativePath(directory, files[i].FilePath);
-		}
-		return CompressFilesToArchive(pathPrefix, files, relativePaths);
-	}
-	bool Archive::CompressFilesToArchive(const TString& pathPrefix, const FilePathInfo::Vector& filePaths, const TStringVector& inArchiveFilePaths)
+	bool Archive::DoCompress(const TString& pathPrefix, const FilePathInfo::Vector& filePaths, const TStringVector& inArchiveFilePaths)
 	{
 		auto archiveWriter = Utility::GetArchiveWriter(*m_Library, m_Property_CompressionFormat);
 		SetCompressionProperties(*archiveWriter, m_Property_MultiThreaded, m_Property_Solid, m_Property_CompressionLevel, m_Property_DictionarySize, m_Property_CompressionMethod);
@@ -192,6 +197,22 @@ namespace SevenZip
 		}
 		return false;
 	}
+	bool Archive::FindAndCompressFiles(const TString& directory, const TString& searchPattern, const TString& pathPrefix, bool recursion)
+	{
+		if (!FileSystem::DirectoryExists(directory) || FileSystem::IsDirectoryEmptyRecursive(directory))
+		{
+			return false;
+		}
+
+		FilePathInfo::Vector files = FileSystem::GetFilesInDirectory(directory, searchPattern.empty() ? AllFilesPattern : searchPattern, recursion);
+		TStringVector relativePaths(files.size(), TString());
+		
+		for (size_t i = 0; i < files.size(); i++)
+		{
+			relativePaths[i] = FileSystem::ExtractRelativePath(directory, files[i].FilePath);
+		}
+		return DoCompress(pathPrefix, files, relativePaths);
+	}
 
 	bool Archive::Load(TStringView filePath)
 	{
@@ -206,56 +227,14 @@ namespace SevenZip
 	}
 	
 	// Extraction
-	bool Archive::ExtractArchive(const FileIndexVector& files, const CComPtr<Callback::Extractor>& extractor) const
+	bool Archive::ExtractArchive(const CComPtr<Callback::Extractor>& extractor, FileIndexView files) const
 	{
-		return DoExtract(files, extractor);
+		return DoExtract(extractor, files);
 	}
-	bool Archive::ExtractArchive(const TString& directory) const
+	bool Archive::ExtractArchive(const TString& directory, FileIndexView files) const
 	{
 		auto extractor = CreateObject<Callback::FileExtractor>(directory, m_Notifier);
-		return DoExtract({}, extractor.Detach());
-	}
-	bool Archive::ExtractArchive(const FileIndexVector& files, const TString& directory) const
-	{
-		auto extractor = CreateObject<Callback::FileExtractor>(directory, m_Notifier);
-		return DoExtract(files, extractor.Detach());
-	}
-	bool Archive::ExtractArchive(const FileIndexToPathMap& files) const
-	{
-		class ExtractToPaths: public Callback::FileExtractor
-		{
-			private:
-				const FileIndexToPathMap& m_TargetPaths;
-
-			public:
-				ExtractToPaths(const FileIndexToPathMap& targetPaths, ProgressNotifier* notifier = nullptr)
-					:FileExtractor({}, notifier), m_TargetPaths(targetPaths)
-				{
-				}
-
-			public:
-				HRESULT GetTargetPath(const UInt32 index, const TString& ralativePath, TString& targetPath) const override
-				{
-					auto it = m_TargetPaths.find(index);
-					if (it != m_TargetPaths.end())
-					{
-						targetPath = it->second;
-						return S_OK;
-					}
-					return E_INVALIDARG;
-				}
-		};
-
-		auto extractor = CreateObject<ExtractToPaths>(files, m_Notifier);
-
-		FileIndexVector fileIndex;
-		fileIndex.reserve(files.size());
-		for (const auto& [index, path]: files)
-		{
-			fileIndex.push_back(index);
-		}
-
-		return DoExtract(fileIndex, extractor.Detach());
+		return DoExtract(extractor.Detach(), files);
 	}
 
 	// Compression
@@ -280,14 +259,14 @@ namespace SevenZip
 			}
 		}
 
-		return CompressFilesToArchive(TString(), files, archivePaths);
+		return DoCompress(TString(), files, archivePaths);
 	}
 	bool Archive::CompressFile(const TString& filePath)
 	{
 		FilePathInfo::Vector files = FileSystem::GetFile(filePath);
 		if (!files.empty())
 		{
-			return CompressFilesToArchive(FileSystem::GetPath(filePath), files, {});
+			return DoCompress(FileSystem::GetPath(filePath), files, {});
 		}
 		return false;
 	}
@@ -296,7 +275,7 @@ namespace SevenZip
 		FilePathInfo::Vector files = FileSystem::GetFile(filePath);
 		if (!files.empty())
 		{
-			return CompressFilesToArchive(FileSystem::GetPath(filePath), files, {archivePath});
+			return DoCompress(FileSystem::GetPath(filePath), files, {archivePath});
 		}
 		return false;
 	}

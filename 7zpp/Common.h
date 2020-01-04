@@ -6,7 +6,6 @@ namespace SevenZip
 {
 	using FileIndex = uint32_t;
 	using FileIndexVector = std::vector<FileIndex>;
-	using FileIndexToPathMap = std::unordered_map<FileIndex, TString>;
 
 	enum class CompressionMethod
 	{
@@ -40,6 +39,83 @@ namespace SevenZip
 		Normal = 5,
 		Maximum = 7,
 		Ultra = 9,
+	};
+}
+
+namespace SevenZip
+{
+	class FileIndexView final
+	{
+		private:
+			const FileIndex* m_Data = nullptr;
+			size_t m_Size = 0;
+
+		private:
+			void AssignSingle(FileIndex fileIndex)
+			{
+				m_Data = reinterpret_cast<FileIndex*>(static_cast<size_t>(fileIndex));
+				m_Size = 1;
+			}
+			void Validate()
+			{
+				if (m_Size == 0)
+				{
+					m_Data = nullptr;
+				}
+				if (m_Size > 1 && m_Data == nullptr)
+				{
+					m_Size = 0;
+				}
+			}
+
+		public:
+			FileIndexView() = default;
+			FileIndexView(const FileIndex* data, size_t count)
+				:m_Data(data), m_Size(count)
+			{
+				if (data && count == 1)
+				{
+					AssignSingle(*data);
+				}
+				Validate();
+			}
+			FileIndexView(FileIndex fileIndex)
+			{
+				AssignSingle(fileIndex);
+				Validate();
+			}
+
+		public:
+			const FileIndex* data() const
+			{
+				if (m_Size == 1)
+				{
+					return reinterpret_cast<const FileIndex*>(&m_Data);
+				}
+				return m_Data;
+			}
+			size_t size() const
+			{
+				return m_Size;
+			}
+			bool empty() const
+			{
+				return m_Size == 0;
+			}
+
+			FileIndexVector CopyToVector() const
+			{
+				return FileIndexVector(m_Data, m_Data + m_Size);
+			}
+
+			explicit operator bool() const
+			{
+				return !empty();
+			}
+			bool operator!() const
+			{
+				return empty();
+			}
 	};
 }
 

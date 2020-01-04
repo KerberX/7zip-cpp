@@ -43,9 +43,9 @@ namespace SevenZip
 			bool InitMetadata();
 
 		protected:
-			bool DoExtract(const FileIndexVector& files, const CComPtr<Callback::Extractor>& extractor) const;
+			bool DoExtract(const CComPtr<Callback::Extractor>& extractor, FileIndexView files = {}) const;
+			bool DoCompress(const TString& pathPrefix, const FilePathInfo::Vector& filePaths, const TStringVector& inArchiveFilePaths);
 			bool FindAndCompressFiles(const TString& directory, const TString& searchPattern, const TString& pathPrefix, bool recursion);
-			bool CompressFilesToArchive(const TString& pathPrefix, const FilePathInfo::Vector& filePaths, const TStringVector& inArchiveFilePaths);
 
 		public:
 			Archive(const Library& library, ProgressNotifier* notifier = nullptr)
@@ -147,19 +147,11 @@ namespace SevenZip
 			}
 
 		public:
-			// Extracts specified files using provided extractor.
-			// Extract entire archive if no files are specified.
-			bool ExtractArchive(const FileIndexVector& files, const CComPtr<Callback::Extractor>& extractor) const;
+			// Extracts files using provided extractor
+			bool ExtractArchive(const CComPtr<Callback::Extractor>& extractor, FileIndexView files = {}) const;
 
-			// Extract entire archive into specified directory
-			bool ExtractArchive(const TString& directory) const;
-			
-			// Extract only specified files into directory. Retains relative paths.
-			bool ExtractArchive(const FileIndexVector& files, const TString& directory) const;
-
-			// Extract only specified files into corresponding files path.
-			// Each file at index to the same file in 'finalPaths' vector.
-			bool ExtractArchive(const FileIndexToPathMap& files) const;
+			// Extract entire archive or only specified files into a directory
+			bool ExtractArchive(const TString& directory, FileIndexView files = {}) const;
 	
 		public:
 			// Includes the last directory as the root in the archive, e.g. specifying "C:\Temp\MyFolder"
