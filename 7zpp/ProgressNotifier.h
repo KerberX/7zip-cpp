@@ -26,6 +26,6 @@ namespace SevenZip
 			virtual void OnMinorProgress(TStringView filePath, int64_t bytesCompleted, int64_t totalBytes) {}
 
 			// Called when progress has reached 100%
-			virtual void OnDone(TStringView filePath = _T("")) {}
+			virtual void OnDone(TStringView filePath = {}) {}
 	};
 }
