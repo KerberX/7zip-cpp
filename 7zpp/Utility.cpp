@@ -203,6 +203,70 @@ namespace SevenZip::Utility
 		}
 		return false;
 	}
+	
+	std::optional<FileInfo> GetArchiveItem(const CComPtr<IInArchive>& archive, FileIndex fileIndex)
+	{
+		FileInfo fileItem;
+		VariantProperty property;
+
+		// Get name of file
+		if (FAILED(archive->GetProperty(fileIndex, kpidPath, &property)))
+		{
+			return std::nullopt;
+		}
+		fileItem.FileName = property.ToString().value_or(TString());
+
+		// Original size
+		if (FAILED(archive->GetProperty(fileIndex, kpidSize, &property)))
+		{
+			return std::nullopt;
+		}
+		fileItem.Size = property.ToInteger<decltype(fileItem.Size)>().value_or(-1);
+
+		// Compressed size
+		if (FAILED(archive->GetProperty(fileIndex, kpidPackSize, &property)))
+		{
+			return std::nullopt;
+		}
+		fileItem.CompressedSize = property.ToInteger<decltype(fileItem.CompressedSize)>().value_or(-1);
+
+		// Attributes
+		if (FAILED(archive->GetProperty(fileIndex, kpidAttrib, &property)))
+		{
+			return std::nullopt;
+		}
+		fileItem.Attributes = property.ToInteger<decltype(fileItem.Attributes)>().value_or(0);
+
+		// Is directory
+		if (FAILED(archive->GetProperty(fileIndex, kpidIsDir, &property)))
+		{
+			return std::nullopt;
+		}
+		fileItem.IsDirectory = property.ToBool().value_or(false);
+
+		// Creation time
+		if (FAILED(archive->GetProperty(fileIndex, kpidCTime, &property)))
+		{
+			return std::nullopt;
+		}
+		fileItem.CreationTime = property.ToFileTime().value_or(FILETIME());
+
+		// Modification time
+		if (FAILED(archive->GetProperty(fileIndex, kpidMTime, &property)))
+		{
+			return std::nullopt;
+		}
+		fileItem.LastWriteTime = property.ToFileTime().value_or(FILETIME());
+
+		// Last access time
+		if (FAILED(archive->GetProperty(fileIndex, kpidATime, &property)))
+		{
+			return std::nullopt;
+		}
+		fileItem.LastAccessTime = property.ToFileTime().value_or(FILETIME());
+
+		return fileItem;
+	}
 	bool GetArchiveItems(const Library& library, const TString& archivePath, CompressionFormat format, FileInfo::Vector& items, ProgressNotifier* notifier)
 	{
 		if (auto fileStream = FileSystem::OpenFileToRead(archivePath))
@@ -234,77 +298,21 @@ namespace SevenZip::Utility
 
 			for (UInt32 i = 0; i < itemCount32; i++)
 			{
-				FileInfo fileItem;
-				VariantProperty property;
-
-				// Get name of file
-				if (FAILED(archive->GetProperty(i, kpidPath, &property)))
+				if (auto fileItem = GetArchiveItem(archive, i))
 				{
-					return false;
-				}
-				fileItem.FileName = property.ToString().value_or(TString());
-
-				// Original size
-				if (FAILED(archive->GetProperty(i, kpidSize, &property)))
-				{
-					return false;
-				}
-				fileItem.Size = property.ToInteger<decltype(fileItem.Size)>().value_or(-1);
-
-				// Compressed size
-				if (FAILED(archive->GetProperty(i, kpidPackSize, &property)))
-				{
-					return false;
-				}
-				fileItem.CompressedSize = property.ToInteger<decltype(fileItem.CompressedSize)>().value_or(-1);
-
-				// Attributes
-				if (FAILED(archive->GetProperty(i, kpidAttrib, &property)))
-				{
-					return false;
-				}
-				fileItem.Attributes = property.ToInteger<decltype(fileItem.Attributes)>().value_or(0);
-
-				// Is directory
-				if (FAILED(archive->GetProperty(i, kpidIsDir, &property)))
-				{
-					return false;
-				}
-				fileItem.IsDirectory = property.ToBool().value_or(false);
-
-				// Creation time
-				if (FAILED(archive->GetProperty(i, kpidCTime, &property)))
-				{
-					return false;
-				}
-				fileItem.CreationTime = property.ToFileTime().value_or(FILETIME());
-
-				// Modification time
-				if (FAILED(archive->GetProperty(i, kpidMTime, &property)))
-				{
-					return false;
-				}
-				fileItem.LastWriteTime = property.ToFileTime().value_or(FILETIME());
-
-				// Last access time
-				if (FAILED(archive->GetProperty(i, kpidATime, &property)))
-				{
-					return false;
-				}
-				fileItem.LastAccessTime = property.ToFileTime().value_or(FILETIME());
-
-				// Notify callback
-				if (notifier)
-				{
-					notifier->OnMajorProgress(fileItem.FileName, i);
-					if (notifier->ShouldStop())
+					// Notify callback
+					if (notifier)
 					{
-						return false;
+						notifier->OnMajorProgress(fileItem->FileName, i);
+						if (notifier->ShouldStop())
+						{
+							return false;
+						}
+
+						// Add the item
+						items.emplace_back(std::move(*fileItem));
 					}
 				}
-
-				// Add the item
-				items.emplace_back(std::move(fileItem));
 			}
 			return true;
 		}

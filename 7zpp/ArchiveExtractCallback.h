@@ -4,6 +4,7 @@
 #include <7zip/Archive/IArchive.h>
 #include <7zip/IPassword.h>
 #include "SevenZipArchive.h"
+#include "FileInfo.h"
 #include "COM.h"
 #include <optional>
 
@@ -24,25 +25,11 @@ namespace SevenZip::Callback
 			CComPtr<IInArchive> m_Archive;
 			ProgressNotifier* m_Notifier = nullptr;
 
-			// Attributes
-			TString m_RelativePath;
-			std::optional<uint32_t> m_Attributes;
-			std::optional<FILETIME> m_ModificationTime;
-			std::optional<int64_t> m_FileSize;
-			std::optional<int64_t> m_CompressedFileSize;
-			bool m_IsDirectory = false;
-
 		protected:
-			TString GetPropertyFilePath(uint32_t fileIndex) const;
-			std::optional<int64_t> GetPropertyFileSize(uint32_t fileIndex) const;
-			std::optional<int64_t> GetPropertyCompressedFileSize(uint32_t fileIndex) const;
-			std::optional<uint32_t> GetPropertyAttributes(uint32_t fileIndex) const;
-			std::optional<FILETIME> GetPropertyModifiedTime(uint32_t fileIndex) const;
-			bool GetPropertyIsDirectory(uint32_t fileIndex) const;
-			HRESULT RetrieveAllProperties(uint32_t index, int32_t askExtractMode);
+			std::optional<FileInfo> GetFileInfo(FileIndex fileIndex) const;
 
-			void EmitDoneCallback();
-			void EmitFileDoneCallback(const TString& path);
+			void EmitDoneCallback(TStringView path = {});
+			void EmitFileDoneCallback(TStringView path, int64_t bytesCompleted, int64_t totalBytes);
 
 		public:
 			Extractor(ProgressNotifier* notifier = nullptr)
@@ -87,8 +74,9 @@ namespace SevenZip::Callback
 	{
 		protected:
 			TString m_Directory;
-
 			TString m_TargetPath;
+			std::optional<FileInfo> m_FileInfo;
+
 			int64_t m_BytesCompleted = 0;
 			size_t m_FilesCount = 0;
 
@@ -106,9 +94,9 @@ namespace SevenZip::Callback
 			STDMETHOD(SetOperationResult)(Int32 resultEOperationResult) override;
 
 		public:
-			virtual HRESULT GetTargetPath(const UInt32 index, const TString& ralativePath, TString& targetPath) const
+			virtual HRESULT GetTargetPath(const UInt32 index, const FileInfo& fileInfo, TString& targetPath) const
 			{
-				return S_OK;
+				return S_FALSE;
 			}
 	};
 }
@@ -117,6 +105,9 @@ namespace SevenZip::Callback
 {
 	class StreamExtractor: public Extractor
 	{
+		private:
+			std::optional<FileInfo> m_FileInfo;
+
 		public:
 			StreamExtractor(ProgressNotifier* notifier = nullptr)
 				:Extractor(notifier)
@@ -136,13 +127,16 @@ namespace SevenZip::Callback
 			}
 			STDMETHOD(SetOperationResult)(Int32 resultEOperationResult) override
 			{
-				EmitFileDoneCallback(m_RelativePath);
+				if (m_FileInfo)
+				{
+					EmitFileDoneCallback(m_FileInfo->FileName, m_FileInfo->Size, m_FileInfo->Size);
+				}
 				return S_OK;
 			}
 
 		public:
-			virtual CComPtr<OutStream> CreateStream(uint32_t fileIndex, const TString& ralativePath) = 0;
-			virtual HRESULT OnDirectory(uint32_t fileIndex, const TString& ralativePath)
+			virtual CComPtr<OutStream> CreateStream(uint32_t fileIndex, const FileInfo& fileInfo) = 0;
+			virtual HRESULT OnDirectory(uint32_t fileIndex, const FileInfo& fileInfo)
 			{
 				return S_FALSE;
 			}
