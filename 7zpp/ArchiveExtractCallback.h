@@ -4,15 +4,10 @@
 #include <7zip/Archive/IArchive.h>
 #include <7zip/IPassword.h>
 #include "SevenZipArchive.h"
+#include "ProgressNotifier.h"
 #include "FileInfo.h"
 #include "COM.h"
 #include <optional>
-
-namespace SevenZip
-{
-	class ProgressNotifier;
-	class OutStream;
-}
 
 namespace SevenZip::Callback
 {
@@ -23,13 +18,10 @@ namespace SevenZip::Callback
 
 		protected:
 			CComPtr<IInArchive> m_Archive;
-			ProgressNotifier* m_Notifier = nullptr;
+			ProgressNotifierDelegate m_Notifier;
 
 		protected:
 			std::optional<FileInfo> GetFileInfo(FileIndex fileIndex) const;
-
-			void EmitDoneCallback(TStringView path = {});
-			void EmitFileDoneCallback(TStringView path, int64_t bytesCompleted, int64_t totalBytes);
 
 		public:
 			Extractor(ProgressNotifier* notifier = nullptr)
@@ -78,23 +70,23 @@ namespace SevenZip::Callback
 			std::optional<FileInfo> m_FileInfo;
 
 			int64_t m_BytesCompleted = 0;
-			size_t m_FilesCount = 0;
+			size_t m_ItemCount = 0;
 
 		public:
 			FileExtractor() = default;
-			FileExtractor(const TString& directory, ProgressNotifier* notifier = nullptr)
+			FileExtractor(TStringView directory, ProgressNotifier* notifier = nullptr)
 				:Extractor(notifier), m_Directory(directory)
 			{
 			}
 
 		public:
 			// IArchiveExtractCallback
-			STDMETHOD(GetStream)(UInt32 index, ISequentialOutStream** outStream, Int32 askExtractMode) override;
+			STDMETHOD(GetStream)(UInt32 fileIndex, ISequentialOutStream** outStream, Int32 askExtractMode) override;
 			STDMETHOD(PrepareOperation)(Int32 askExtractMode) override;
 			STDMETHOD(SetOperationResult)(Int32 resultEOperationResult) override;
 
 		public:
-			virtual HRESULT GetTargetPath(uint32_t index, const FileInfo& fileInfo, TString& targetPath) const
+			virtual HRESULT GetTargetPath(uint32_t fileIndex, const FileInfo& fileInfo, TString& targetPath) const
 			{
 				return S_FALSE;
 			}

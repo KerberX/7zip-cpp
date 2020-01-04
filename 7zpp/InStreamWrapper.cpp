@@ -40,21 +40,18 @@ namespace SevenZip
 
 	STDMETHODIMP InStreamWrapper::Read(void* data, UInt32 size, UInt32* processedSize)
 	{
-		if (m_Notifier)
+		m_Notifier.OnProgress({}, m_BytesRead);
+		if (m_Notifier.ShouldCancel())
 		{
-			m_Notifier->OnMinorProgress(m_FilePath, m_CurrentPos, m_StreamSize);
-			if (m_Notifier->ShouldStop())
-			{
-				return HRESULT_FROM_WIN32(ERROR_CANCELLED);
-			}
+			return E_ABORT;
 		}
 
 		ULONG read = 0;
 		HRESULT hr = m_BaseStream->Read(data, size, &read);
-		if (processedSize != nullptr)
+		if (processedSize)
 		{
 			*processedSize = read;
-			m_CurrentPos += read;
+			m_BytesRead += read;
 		}
 
 		// Transform S_FALSE to S_OK
@@ -70,18 +67,18 @@ namespace SevenZip
 		if (newPosition != nullptr)
 		{
 			*newPosition = newPos.QuadPart;
-			m_CurrentPos = *newPosition;
+			m_BytesRead = *newPosition;
 		}
 		return hr;
 	}
 	STDMETHODIMP InStreamWrapper::GetSize(UInt64* size)
 	{
-		STATSTG statInfo;
+		STATSTG statInfo = {};
 		HRESULT hr = m_BaseStream->Stat(&statInfo, STATFLAG_NONAME);
 		if (SUCCEEDED(hr))
 		{
 			*size = statInfo.cbSize.QuadPart;
-			m_StreamSize = *size;
+			m_BytesTotal = *size;
 		}
 		return hr;
 	}

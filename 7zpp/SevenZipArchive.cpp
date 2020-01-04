@@ -10,7 +10,6 @@
 #include "ArchiveOpenCallback.h"
 #include "ArchiveExtractCallback.h"
 #include "ArchiveUpdateCallback.h"
-#include "ListingNotifier.h"
 #include "ProgressNotifier.h"
 #include "InStreamWrapper.h"
 #include "OutStreamWrapper.h"
@@ -131,7 +130,7 @@ namespace SevenZip
 		{
 			auto archive = Utility::GetArchiveReader(*m_Library, m_Property_CompressionFormat);
 			auto inFile = CreateObject<InStreamWrapper>(fileStream, m_Notifier);
-			auto openCallback = CreateObject<Callback::OpenArchive>(m_Notifier);
+			auto openCallback = CreateObject<Callback::OpenArchive>(m_ArchivePath, m_Notifier);
 
 			if (SUCCEEDED(archive->Open(inFile, nullptr, openCallback)))
 			{
@@ -166,14 +165,7 @@ namespace SevenZip
 					result = archive->Extract(nullptr, std::numeric_limits<UInt32>::max(), false, extractor);
 				}
 
-				if (SUCCEEDED(result))
-				{
-					if (m_Notifier)
-					{
-						m_Notifier->OnDone();
-					}
-					return true;
-				}
+				return SUCCEEDED(result);
 			}
 		}
 		return false;
@@ -187,15 +179,7 @@ namespace SevenZip
 		auto updateCallback = CreateObject<Callback::UpdateArchiveBase>(pathPrefix, filePaths, inArchiveFilePaths, m_ArchivePath, m_Notifier);
 		updateCallback->SetExistingItemsCount(m_Items.size());
 
-		if (SUCCEEDED(archiveWriter->UpdateItems(outFile, static_cast<UInt32>(filePaths.size()), updateCallback)))
-		{
-			if (m_Notifier)
-			{
-				m_Notifier->OnDone();
-			}
-			return true;
-		}
-		return false;
+		return SUCCEEDED(archiveWriter->UpdateItems(outFile, static_cast<UInt32>(filePaths.size()), updateCallback));
 	}
 	bool Archive::FindAndCompressFiles(const TString& directory, const TString& searchPattern, const TString& pathPrefix, bool recursion)
 	{

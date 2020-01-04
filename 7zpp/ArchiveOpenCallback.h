@@ -3,26 +3,35 @@
 #pragma once
 #include <7zip/Archive/IArchive.h>
 #include <7zip/IPassword.h>
+#include "ProgressNotifier.h"
 #include "COM.h"
-
-namespace SevenZip
-{
-	class ProgressNotifier;
-}
 
 namespace SevenZip::Callback
 {
-	class OpenArchive:public IArchiveOpenCallback, public ICryptoGetTextPassword
+	class OpenArchive: public IArchiveOpenCallback, public ICryptoGetTextPassword
 	{
 		private:
 			COM::RefCount<OpenArchive> m_RefCount;
 
-			ProgressNotifier* m_Notifier = nullptr;
-			int64_t m_Total = 0;
+		protected:
+			ProgressNotifierDelegate m_Notifier;
+			TString m_ArchivePath;
+
+			int64_t m_BytesCompleted = 0;
+			int64_t m_BytesTotal = 0;
 
 		public:
-			OpenArchive(ProgressNotifier* notifier = nullptr);
-			~OpenArchive();
+			OpenArchive(const TString& path, ProgressNotifier* notifier = nullptr)
+				:m_RefCount(*this), m_Notifier(notifier), m_ArchivePath(path)
+			{
+			}
+			virtual ~OpenArchive() = default;
+
+		public:
+			void SetNotifier(ProgressNotifier* notifier)
+			{
+				m_Notifier = notifier;
+			}
 
 		public:
 			STDMETHOD(QueryInterface)(REFIID iid, void** ppvObject);

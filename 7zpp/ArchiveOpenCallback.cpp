@@ -6,14 +6,6 @@
 
 namespace SevenZip::Callback
 {
-	OpenArchive::OpenArchive(ProgressNotifier* notifier)
-		:m_RefCount(*this), m_Notifier(notifier)
-	{
-	}
-	OpenArchive::~OpenArchive()
-	{
-	}
-
 	STDMETHODIMP OpenArchive::QueryInterface(REFIID iid, void** ppvObject)
 	{
 		if (iid == __uuidof(IUnknown))
@@ -42,23 +34,17 @@ namespace SevenZip::Callback
 
 	STDMETHODIMP OpenArchive::SetTotal(const UInt64* files, const UInt64* bytes)
 	{
-		if (bytes)
-		{
-			m_Total = *bytes;
-		}
+		m_BytesTotal = bytes ? *bytes : 0;
+		m_Notifier.OnStart(m_ArchivePath, m_BytesTotal);
+
 		return S_OK;
 	}
 	STDMETHODIMP OpenArchive::SetCompleted(const UInt64* files, const UInt64* bytes)
 	{
-		if (m_Notifier)
-		{
-			m_Notifier->OnMinorProgress(_T(""), bytes ? *bytes : 0, m_Total);
-			if (m_Notifier->ShouldStop())
-			{
-				return HRESULT_FROM_WIN32(ERROR_CANCELLED);
-			}
-		}
-		return S_OK;
+		m_BytesCompleted = bytes ? *bytes : 0;
+
+		m_Notifier.OnProgress({}, m_BytesCompleted);
+		return m_Notifier.ShouldCancel() ? E_ABORT : S_OK;
 	}
 	STDMETHODIMP OpenArchive::CryptoGetTextPassword(BSTR* password)
 	{

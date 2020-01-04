@@ -106,7 +106,7 @@ namespace SevenZip::Utility
 
 		if (notifier)
 		{
-			notifier->OnStartWithTotal(_T(""), std::size(availableFormats));
+			notifier->OnStart(_T("Trying to detect archive compression format"), std::size(availableFormats));
 		}
 
 		// Check each format for one that works
@@ -123,8 +123,8 @@ namespace SevenZip::Utility
 
 				if (notifier)
 				{
-					notifier->OnMajorProgress(String::Format(_T("Detecting format. Trying %d"), static_cast<int>(format)), counter);
-					if (notifier->ShouldStop())
+					notifier->OnProgress(String::Format(_T("Detecting format. Trying %s"), GetCompressionFormatName(format)), counter);
+					if (notifier->ShouldCancel())
 					{
 						return CompressionFormat::Unknown;
 					}
@@ -142,7 +142,7 @@ namespace SevenZip::Utility
 					archive->Close();
 				});
 				auto inFile = CreateObject<InStreamWrapper>(fileStream, notifier);
-				auto openCallback = CreateObject<Callback::OpenArchive>(notifier);
+				auto openCallback = CreateObject<Callback::OpenArchive>(archivePath, notifier);
 
 				if (archive->Open(inFile, nullptr, openCallback) == S_OK)
 				{
@@ -156,7 +156,7 @@ namespace SevenZip::Utility
 		// There is a problem that GZip files will not be detected using the above method. This is a fix.
 		if (true)
 		{
-			if (notifier && notifier->ShouldStop())
+			if (notifier && notifier->ShouldCancel())
 			{
 				return CompressionFormat::Unknown;
 			}
@@ -177,29 +177,33 @@ namespace SevenZip::Utility
 		if (auto fileStream = FileSystem::OpenFileToRead(archivePath))
 		{
 			auto archive = Utility::GetArchiveReader(library, format);
-			CallAtExit atExit([&]()
-			{
-				archive->Close();
-			});
 			auto inFile = CreateObject<InStreamWrapper>(fileStream, notifier);
-			auto openCallback = CreateObject<Callback::OpenArchive>(notifier);
+			auto openCallback = CreateObject<Callback::OpenArchive>(archivePath, notifier);
 
-			if (FAILED(archive->Open(inFile, nullptr, openCallback)))
+			if (SUCCEEDED(archive->Open(inFile, nullptr, openCallback)))
 			{
-				return false;
-			}
-			if (notifier)
-			{
-				notifier->OnMajorProgress(_T("Getting number of items"), 0);
-			}
+				CallAtExit atExit([&]()
+				{
+					archive->Close();
+				});
 
-			UInt32 itemCount32 = 0;
-			if (archive->GetNumberOfItems(&itemCount32) != S_OK)
-			{
-				return false;
+				if (notifier)
+				{
+					notifier->OnStart(_T("Getting number of items"), 0);
+				}
+
+				UInt32 itemCount32 = 0;
+				if (archive->GetNumberOfItems(&itemCount32) != S_OK)
+				{
+					if (notifier)
+					{
+						notifier->OnEnd();
+					}
+
+					itemCount = itemCount32;
+					return true;
+				}
 			}
-			itemCount = itemCount32;
-			return true;
 		}
 		return false;
 	}
@@ -277,7 +281,7 @@ namespace SevenZip::Utility
 				archive->Close();
 			});
 			auto inFile = CreateObject<InStreamWrapper>(fileStream, notifier);
-			auto openCallback = CreateObject<Callback::OpenArchive>(notifier);
+			auto openCallback = CreateObject<Callback::OpenArchive>(archivePath, notifier);
 
 			if (FAILED(archive->Open(inFile, nullptr, openCallback)))
 			{
@@ -293,7 +297,7 @@ namespace SevenZip::Utility
 
 			if (notifier)
 			{
-				notifier->OnStartWithTotal(_T("Enumerating items"), itemCount32);
+				notifier->OnStart(_T("Enumerating items"), itemCount32);
 			}
 
 			for (UInt32 i = 0; i < itemCount32; i++)
@@ -303,8 +307,8 @@ namespace SevenZip::Utility
 					// Notify callback
 					if (notifier)
 					{
-						notifier->OnMajorProgress(fileItem->FileName, i);
-						if (notifier->ShouldStop())
+						notifier->OnProgress(fileItem->FileName, i);
+						if (notifier->ShouldCancel())
 						{
 							return false;
 						}
@@ -342,12 +346,11 @@ namespace SevenZip::Utility
 			}
 			case CompressionFormat::BZip2:
 			{
-				return _T(".bz");
+				return _T(".bz2");
 			}
 			case CompressionFormat::Tar:
 			{
 				return _T(".tar");
-				break;
 			}
 			case CompressionFormat::Lzma:
 			{
@@ -417,5 +420,56 @@ namespace SevenZip::Utility
 		}
 
 		return CompressionFormat::Unknown;
+	}
+	TString GetCompressionFormatName(CompressionFormat format)
+	{
+		switch (format)
+		{
+			case CompressionFormat::SevenZip:
+			{
+				return _T("7-Zip");
+			}
+			case CompressionFormat::Zip:
+			{
+				return _T("ZIP");
+			}
+			case CompressionFormat::Rar:
+			{
+				return _T("RAR");
+			}
+			case CompressionFormat::Rar5:
+			{
+				return _T(".RAR 5");
+			}
+			case CompressionFormat::GZip:
+			{
+				return _T("GZip");
+			}
+			case CompressionFormat::BZip2:
+			{
+				return _T("BZip2");
+			}
+			case CompressionFormat::Tar:
+			{
+				return _T("TAR");
+			}
+			case CompressionFormat::Lzma:
+			{
+				return _T("LZMA");
+			}
+			case CompressionFormat::Lzma86:
+			{
+				return _T("LZMA 86");
+			}
+			case CompressionFormat::Cab:
+			{
+				return _T("CAB");
+			}
+			case CompressionFormat::Iso:
+			{
+				return _T("ISO");
+			}
+		}
+		return {};
 	}
 }

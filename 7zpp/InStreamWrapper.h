@@ -1,11 +1,7 @@
 #pragma once
 #include <7zip/IStream.h>
+#include "ProgressNotifier.h"
 #include "COM.h"
-
-namespace SevenZip
-{
-	class ProgressNotifier;
-}
 
 namespace SevenZip
 {
@@ -15,12 +11,11 @@ namespace SevenZip
 			COM::RefCount<InStreamWrapper> m_RefCount;
 
 		protected:
+			ProgressNotifierDelegate m_Notifier;
 			CComPtr<IStream> m_BaseStream = nullptr;
-			ProgressNotifier* m_Notifier = nullptr;
-				
-			TString m_FilePath;
-			int64_t m_CurrentPos = 0;
-			int64_t m_StreamSize = 0;
+
+			int64_t m_BytesRead = 0;
+			int64_t m_BytesTotal = 0;
 
 		public:
 			InStreamWrapper(ProgressNotifier* notifier = nullptr)
@@ -28,10 +23,20 @@ namespace SevenZip
 			{
 			}
 			InStreamWrapper(const CComPtr<IStream>& baseStream, ProgressNotifier* notifier = nullptr)
-				:m_RefCount(*this), m_BaseStream(baseStream), m_Notifier(notifier)
+				:m_RefCount(*this), m_Notifier(notifier), m_BaseStream(baseStream)
 			{
 			}
 			virtual ~InStreamWrapper() = default;
+
+		public:
+			void SetNotifier(ProgressNotifier* notifier)
+			{
+				m_Notifier = notifier;
+			}
+			void SetSize(int64_t size)
+			{
+				m_BytesTotal = size;
+			}
 
 		public:
 			STDMETHOD(QueryInterface)(REFIID iid, void** ppvObject) override;
@@ -52,19 +57,5 @@ namespace SevenZip
 
 			// IStreamGetSize
 			STDMETHOD(GetSize)(UInt64* size) override;
-
-		public:
-			void SetNotifier(ProgressNotifier* notifier)
-			{
-				m_Notifier = notifier;
-			}
-			void SetFilePath(const TString& path)
-			{
-				m_FilePath = path;
-			}
-			void SetStreamSize(int64_t size)
-			{
-				m_StreamSize = size;
-			}
 	};
 }

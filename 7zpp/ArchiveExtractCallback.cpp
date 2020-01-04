@@ -10,31 +10,11 @@
 #include "Common.h"
 #include <comdef.h>
 
-namespace
-{
-	constexpr auto EmptyFileAlias = _T("[Content]");
-}
-
 namespace SevenZip::Callback
 {
 	std::optional<SevenZip::FileInfo> Extractor::GetFileInfo(FileIndex fileIndex) const
 	{
 		return Utility::GetArchiveItem(m_Archive, fileIndex);
-	}
-
-	void Extractor::EmitDoneCallback(TStringView path)
-	{
-		if (m_Notifier)
-		{
-			m_Notifier->OnDone(path);
-		}
-	}
-	void Extractor::EmitFileDoneCallback(TStringView path, int64_t bytesCompleted, int64_t totalBytes)
-	{
-		if (m_Notifier)
-		{
-			m_Notifier->OnMinorProgress(path, bytesCompleted, totalBytes);
-		}
 	}
 
 	STDMETHODIMP Extractor::QueryInterface(REFIID iid, void** ppvObject)
@@ -70,12 +50,8 @@ namespace SevenZip::Callback
 	}
 	STDMETHODIMP Extractor::SetCompleted(const UInt64* completeValue)
 	{
-		// Notes:
-		// - For ZIP format SetCompleted only called once per 1000 files in central directory and once per 100 in local ones.
-		// - For 7Z format SetCompleted is never called.
-		//
-		// Don't call this directly, it will be called per file which is more consistent across archive types
-		// TODO: incorporate better progress tracking
+		// For ZIP format SetCompleted only called once per 1000 files in central directory and once per 100 in local ones.
+		// For 7Z format SetCompleted is never called.
 		return S_OK;
 	}
 
@@ -88,12 +64,19 @@ namespace SevenZip::Callback
 
 namespace SevenZip::Callback
 {
-	STDMETHODIMP FileExtractor::GetStream(UInt32 index, ISequentialOutStream** outStream, Int32 askExtractMode)
+	STDMETHODIMP FileExtractor::GetStream(UInt32 fileIndex, ISequentialOutStream** outStream, Int32 askExtractMode)
 	{
-		m_FileInfo = GetFileInfo(index);
+		m_TargetPath.clear();
+		m_FileInfo = GetFileInfo(fileIndex);
+
 		if (m_FileInfo)
 		{
-			HRESULT hr = GetTargetPath(index, *m_FileInfo, m_TargetPath);
+			if (m_Notifier.ShouldCancel())
+			{
+				return E_ABORT;
+			}
+
+			HRESULT hr = GetTargetPath(fileIndex, *m_FileInfo, m_TargetPath);
 			if (hr == S_FALSE)
 			{
 				// TODO: m_Directory could be a relative path
@@ -109,16 +92,7 @@ namespace SevenZip::Callback
 
 				// Increment counters and call notifier
 				m_BytesCompleted += m_FileInfo->Size;
-				m_FilesCount++;
-
-				if (m_Notifier)
-				{
-					m_Notifier->OnMajorProgress(m_FileInfo->FileName, m_BytesCompleted);
-					if (m_Notifier->ShouldStop())
-					{
-						return E_ABORT;
-					}
-				}
+				m_ItemCount++;
 
 				if (m_FileInfo->IsDirectory)
 				{
@@ -133,15 +107,14 @@ namespace SevenZip::Callback
 				auto fileStream = FileSystem::OpenFileToWrite(m_TargetPath);
 				if (!fileStream)
 				{
-					m_TargetPath.clear();
-					return HRESULT_FROM_WIN32(GetLastError());
+					return HRESULT_FROM_WIN32(::GetLastError());
 				}
 
-				auto wrapperStream = CreateObject<OutStreamWrapper_IStream>(fileStream, m_Notifier);
-				wrapperStream->SetFilePath(m_TargetPath);
+				auto wrapperStream = CreateObject<OutStreamWrapper_IStream>(fileStream, *m_Notifier);
 				wrapperStream->SetSize(m_FileInfo->Size);
 				*outStream = wrapperStream.Detach();
 
+				m_Notifier.OnStart(m_FileInfo->FileName, m_FileInfo->Size);
 				return S_OK;
 			}
 		}
@@ -149,16 +122,11 @@ namespace SevenZip::Callback
 	}
 	STDMETHODIMP FileExtractor::PrepareOperation(Int32 askExtractMode)
 	{
+		m_TargetPath.clear();
 		return S_OK;
 	}
 	STDMETHODIMP FileExtractor::SetOperationResult(Int32 operationResult)
 	{
-		if (m_TargetPath.empty())
-		{
-			EmitDoneCallback();
-			return S_OK;
-		}
-
 		if (m_FileInfo)
 		{
 			HANDLE fileHandle = ::CreateFile(m_TargetPath.c_str(), GENERIC_WRITE, FILE_SHARE_READ, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
@@ -175,7 +143,7 @@ namespace SevenZip::Callback
 				::CloseHandle(fileHandle);
 			}
 
-			EmitFileDoneCallback(m_FileInfo->FileName, m_FileInfo->Size, m_FileInfo->Size);
+			m_Notifier.OnEnd();
 		}
 		return S_OK;
 	}

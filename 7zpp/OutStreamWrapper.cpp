@@ -36,31 +36,27 @@ namespace SevenZip
 {
 	STDMETHODIMP OutStreamWrapper::Write(const void* data, UInt32 size, UInt32* written)
 	{
-		if (m_Notifier)
+		if (m_Notifier.ShouldCancel())
 		{
-			m_Notifier->OnMinorProgress(m_FilePath, m_CurrentPosition, m_StreamSize);
-			if (m_Notifier->ShouldStop())
-			{
-				return HRESULT_FROM_WIN32(ERROR_CANCELLED);
-			}
+			return E_ABORT;
 		}
 
 		uint32_t writtenBase = 0;
 		HRESULT hr = DoWrite(data, size, writtenBase);
-		m_CurrentPosition += writtenBase;
+		m_BytesWritten += writtenBase;
 
 		if (written)
 		{
 			*written = writtenBase;
 		}
-		if (!m_StreamSizeKnown)
+		if (!m_BytesTotalKnown)
 		{
-			m_StreamSize += writtenBase;
+			m_BytesTotal += writtenBase;
 		}
 
+		m_Notifier.OnProgress({}, m_BytesWritten);
 		return hr;
 	}
-
 	STDMETHODIMP OutStreamWrapper::Seek(Int64 offset, UInt32 seekOrigin, UInt64* newPosition)
 	{
 		int64_t newPos = 0;
@@ -73,8 +69,9 @@ namespace SevenZip
 	}
 	STDMETHODIMP OutStreamWrapper::SetSize(UInt64 newSize)
 	{
-		m_StreamSize = newSize;
-		m_StreamSizeKnown = true;
+		m_BytesTotal = newSize;
+		m_BytesTotalKnown = true;
+
 		return DoSetSize(newSize);
 	}
 }

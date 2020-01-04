@@ -29,4 +29,5 @@ namespace SevenZip::Utility
 
 	TString ExtensionFromCompressionFormat(CompressionFormat format);
 	CompressionFormat CompressionFormatFromExtension(const TString& extWithDot);
+	TString GetCompressionFormatName(CompressionFormat format);
 }

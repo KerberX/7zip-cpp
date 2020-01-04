@@ -1,13 +1,9 @@
 #pragma once
 #include <7zip/IStream.h>
 #include "SevenZipArchive.h"
+#include "ProgressNotifier.h"
 #include "COM.h"
 #include "Stream.h"
-
-namespace SevenZip
-{
-	class ProgressNotifier;
-}
 
 namespace SevenZip
 {
@@ -17,8 +13,7 @@ namespace SevenZip
 			COM::RefCount<OutStream> m_RefCount;
 
 		protected:
-			TString m_FilePath;
-			ProgressNotifier* m_Notifier = nullptr;
+			ProgressNotifierDelegate m_Notifier;
 
 		public:
 			OutStream(ProgressNotifier* notifier = nullptr)
@@ -43,10 +38,6 @@ namespace SevenZip
 			{
 				m_Notifier = notifier;
 			}
-			void SetFilePath(const TString& path)
-			{
-				m_FilePath = path;
-			}
 	};
 }
 
@@ -55,9 +46,9 @@ namespace SevenZip
 	class OutStreamWrapper: public OutStream
 	{
 		protected:
-			int64_t m_CurrentPosition = 0;
-			int64_t m_StreamSize = 0;
-			bool m_StreamSizeKnown = false;
+			int64_t m_BytesWritten = 0;
+			int64_t m_BytesTotal = 0;
+			bool m_BytesTotalKnown = false;
 
 		protected:
 			virtual HRESULT DoWrite(const void* data, uint32_t size, uint32_t& written) = 0;

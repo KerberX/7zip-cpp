@@ -45,30 +45,20 @@ namespace SevenZip::Callback
 
 	STDMETHODIMP UpdateArchiveBase::SetTotal(UInt64 size)
 	{
-		if (m_ProgressNotifier)
-		{
-			m_ProgressNotifier->OnStartWithTotal(m_OutputPath, size);
-		}
+		m_Notifier.OnStart(m_OutputPath, size);
 		return S_OK;
 	}
 	STDMETHODIMP UpdateArchiveBase::SetCompleted(const UInt64* completeValue)
 	{
-		if (m_ProgressNotifier)
-		{
-			m_ProgressNotifier->OnMajorProgress(_T(""), *completeValue);
-			if (m_ProgressNotifier->ShouldStop())
-			{
-				return HRESULT_FROM_WIN32(ERROR_CANCELLED);
-			}
-		}
-		return S_OK;
+		m_Notifier.OnProgress({}, completeValue ? *completeValue : 0);
+		return m_Notifier.ShouldCancel() ? E_ABORT : S_OK;
 	}
 
 	STDMETHODIMP UpdateArchiveBase::GetUpdateItemInfo(UInt32 index, Int32* newData, Int32* newProperties, UInt32* indexInArchive)
 	{
 		// Setting info for Create mode (vs. Append mode).
-		// TODO: support append mode
 
+		// TODO: support append mode
 		if (newData)
 		{
 			*newData = 1;
@@ -82,15 +72,14 @@ namespace SevenZip::Callback
 			*indexInArchive = std::numeric_limits<UInt32>::max();
 		}
 
-		if (m_ProgressNotifier && index < m_FilePaths.size())
+		if (m_Notifier && index < m_SourcePaths.size())
 		{
-			m_ProgressNotifier->OnMinorProgress(m_FilePaths[index].FilePath, 0, 0);
-			if (m_ProgressNotifier->ShouldStop())
+			m_Notifier.OnProgress(m_SourcePaths[index].FilePath, 0);
+			if (m_Notifier.ShouldCancel())
 			{
-				return HRESULT_FROM_WIN32(ERROR_CANCELLED);
+				return E_ABORT;
 			}
 		}
-
 		return S_OK;
 	}
 	STDMETHODIMP UpdateArchiveBase::GetProperty(UInt32 index, PROPID propID, PROPVARIANT* value)
@@ -107,17 +96,17 @@ namespace SevenZip::Callback
 			return E_INVALIDARG;
 		}
 
-		if (index >= m_FilePaths.size())
+		if (index >= m_SourcePaths.size())
 		{
 			return E_INVALIDARG;
 		}
 
-		const FilePathInfo& fileInfo = m_FilePaths[index];
+		const FilePathInfo& fileInfo = m_SourcePaths[index];
 		switch (propID)
 		{
 			case kpidPath:
 			{
-				prop = m_ArchiveRelativeFilePaths[index].c_str();
+				prop = m_TargetPaths[index].c_str();
 				break;
 			}
 			case kpidIsDir:
@@ -160,12 +149,12 @@ namespace SevenZip::Callback
 	}
 	STDMETHODIMP UpdateArchiveBase::GetStream(UInt32 index, ISequentialInStream** inStream)
 	{
-		if (index >= m_FilePaths.size())
+		if (index >= m_SourcePaths.size())
 		{
 			return E_INVALIDARG;
 		}
 
-		const FilePathInfo& fileInfo = m_FilePaths[index];
+		const FilePathInfo& fileInfo = m_SourcePaths[index];
 		if (fileInfo.IsDirectory)
 		{
 			return S_OK;
@@ -177,11 +166,11 @@ namespace SevenZip::Callback
 			return HRESULT_FROM_WIN32(::GetLastError());
 		}
 
-		auto wrapperStream = CreateObject<InStreamWrapper>(fileStream, m_ProgressNotifier);
-		wrapperStream->SetFilePath(fileInfo.FilePath);
-		wrapperStream->SetStreamSize(fileInfo.Size);
+		auto wrapperStream = CreateObject<InStreamWrapper>(fileStream, *m_Notifier);
+		wrapperStream->SetSize(fileInfo.Size);
 		*inStream = wrapperStream.Detach();
 
+		m_Notifier.OnStart(fileInfo.FilePath, fileInfo.Size);
 		return S_OK;
 	}
 	STDMETHODIMP UpdateArchiveBase::SetOperationResult(Int32 operationResult)

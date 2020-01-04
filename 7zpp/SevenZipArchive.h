@@ -6,7 +6,6 @@ namespace SevenZip
 {
 	class Library;
 	class ProgressNotifier;
-	class ListingNotifier;
 
 	namespace Callback
 	{

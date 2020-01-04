@@ -4,13 +4,9 @@
 #include <7zip/Archive/IArchive.h>
 #include <7zip/ICoder.h>
 #include <7zip/IPassword.h>
+#include "ProgressNotifier.h"
 #include "FileInfo.h"
 #include "COM.h"
-
-namespace SevenZip
-{
-	class ProgressNotifier;
-}
 
 namespace SevenZip::Callback
 {
@@ -20,20 +16,35 @@ namespace SevenZip::Callback
 			COM::RefCount<UpdateArchiveBase> m_RefCount;
 
 		protected:
+			ProgressNotifierDelegate m_Notifier;
+
 			TString m_DirectoryPrefix;
 			TString m_OutputPath;
 			size_t m_ExistingItemsCount = 0;
-			const std::vector<TString>& m_ArchiveRelativeFilePaths;
-			const std::vector<FilePathInfo>& m_FilePaths;
-
-			ProgressNotifier* m_ProgressNotifier = nullptr;
+			const std::vector<TString>& m_TargetPaths;
+			const std::vector<FilePathInfo>& m_SourcePaths;
 
 		public:
-			UpdateArchiveBase(const TString& dirPrefix, const std::vector<FilePathInfo>& filePaths, const std::vector<TString>& inArchiveFilePaths, const TString& outputFilePath, ProgressNotifier* notifier = nullptr)
-				:m_RefCount(*this), m_DirectoryPrefix(dirPrefix), m_FilePaths(filePaths), m_ArchiveRelativeFilePaths(inArchiveFilePaths), m_OutputPath(outputFilePath), m_ProgressNotifier(notifier)
+			UpdateArchiveBase(const TString& dirPrefix,
+							  const std::vector<FilePathInfo>& filePaths,
+							  const std::vector<TString>& inArchiveFilePaths,
+							  const TString& outputFilePath,
+							  ProgressNotifier* notifier = nullptr)
+				:m_RefCount(*this),
+				m_DirectoryPrefix(dirPrefix),
+				m_SourcePaths(filePaths),
+				m_TargetPaths(inArchiveFilePaths),
+				m_OutputPath(outputFilePath),
+				m_Notifier(notifier)
 			{
 			}
-			~UpdateArchiveBase() = default;
+			virtual ~UpdateArchiveBase() = default;
+
+		public:
+			void SetNotifier(ProgressNotifier* notifier)
+			{
+				m_Notifier = notifier;
+			}
 
 		public:
 			STDMETHOD(QueryInterface)(REFIID iid, void** ppvObject);
