@@ -105,7 +105,10 @@ namespace SevenZip
 
 			FileIndexVector CopyToVector() const
 			{
-				return FileIndexVector(m_Data, m_Data + m_Size);
+				const FileIndex* data = this->data();
+				const size_t size = this->size();
+
+				return FileIndexVector(data, data + size);
 			}
 
 			explicit operator bool() const
