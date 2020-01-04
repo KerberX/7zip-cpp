@@ -390,7 +390,6 @@
     <ClInclude Include="FileSystem.h" />
     <ClInclude Include="GUIDs.h" />
     <ClInclude Include="InStreamWrapper.h" />
-    <ClInclude Include="ListingNotifier.h" />
     <ClInclude Include="SevenString.h" />
     <ClInclude Include="OutStreamWrapper.h" />
     <ClInclude Include="PathScanner.h" />

@@ -76,9 +76,6 @@
     <ClInclude Include="targetver.h">
       <Filter>Header files\Misc</Filter>
     </ClInclude>
-    <ClInclude Include="ListingNotifier.h">
-      <Filter>Header files\Notifiers</Filter>
-    </ClInclude>
     <ClInclude Include="ProgressNotifier.h">
       <Filter>Header files\Notifiers</Filter>
     </ClInclude>
