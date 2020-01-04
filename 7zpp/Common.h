@@ -47,52 +47,52 @@ namespace SevenZip
 	class FileIndexView final
 	{
 		private:
-			const FileIndex* m_Data = nullptr;
+			union
+			{
+				const FileIndex* Ptr = nullptr;
+				FileIndex Index;
+			} m_Data;
 			size_t m_Size = 0;
 
 		private:
 			void AssignSingle(FileIndex fileIndex)
 			{
-				m_Data = reinterpret_cast<FileIndex*>(static_cast<size_t>(fileIndex));
+				m_Data.Index = fileIndex;
 				m_Size = 1;
 			}
-			void Validate()
+			bool IsSingleIndex() const
 			{
-				if (m_Size == 0)
-				{
-					m_Data = nullptr;
-				}
-				if (m_Size > 1 && m_Data == nullptr)
-				{
-					m_Size = 0;
-				}
+				return m_Size == 1;
 			}
 
 		public:
 			FileIndexView() = default;
 			FileIndexView(const FileIndex* data, size_t count)
-				:m_Data(data), m_Size(count)
 			{
-				if (data && count == 1)
+				if (data && count != 0)
 				{
-					AssignSingle(*data);
+					m_Data.Ptr = data;
+					m_Size = count;
+
+					if (count == 1)
+					{
+						AssignSingle(*data);
+					}
 				}
-				Validate();
 			}
 			FileIndexView(FileIndex fileIndex)
 			{
 				AssignSingle(fileIndex);
-				Validate();
 			}
 
 		public:
 			const FileIndex* data() const
 			{
-				if (m_Size == 1)
+				if (IsSingleIndex())
 				{
-					return reinterpret_cast<const FileIndex*>(&m_Data);
+					return &m_Data.Index;
 				}
-				return m_Data;
+				return m_Data.Ptr;
 			}
 			size_t size() const
 			{
