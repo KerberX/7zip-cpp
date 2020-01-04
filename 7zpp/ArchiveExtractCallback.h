@@ -94,7 +94,7 @@ namespace SevenZip::Callback
 			STDMETHOD(SetOperationResult)(Int32 resultEOperationResult) override;
 
 		public:
-			virtual HRESULT GetTargetPath(const UInt32 index, const FileInfo& fileInfo, TString& targetPath) const
+			virtual HRESULT GetTargetPath(uint32_t index, const FileInfo& fileInfo, TString& targetPath) const
 			{
 				return S_FALSE;
 			}
