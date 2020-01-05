@@ -312,10 +312,10 @@ namespace SevenZip::Utility
 						{
 							return false;
 						}
-
-						// Add the item
-						items.emplace_back(std::move(*fileItem));
 					}
+
+					// Add the item
+					items.emplace_back(std::move(*fileItem));
 				}
 			}
 			return true;
