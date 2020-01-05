@@ -33,7 +33,7 @@ namespace SevenZip
 
 		public:
 			ProgressNotifierDelegate(ProgressNotifier* notifier = nullptr)
-				:m_Notifier(m_Notifier)
+				:m_Notifier(notifier)
 			{
 			}
 
