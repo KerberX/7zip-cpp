@@ -42,7 +42,7 @@ namespace SevenZip
 			bool InitMetadata();
 
 		protected:
-			bool DoExtract(const CComPtr<Callback::Extractor>& extractor, FileIndexView files = {}) const;
+			bool DoExtract(const CComPtr<Callback::Extractor>& extractor, const FileIndexView* files) const;
 			bool DoCompress(const TString& pathPrefix, const FilePathInfo::Vector& filePaths, const TStringVector& inArchiveFilePaths);
 			bool FindAndCompressFiles(const TString& directory, const TString& searchPattern, const TString& pathPrefix, bool recursion);
 
@@ -146,11 +146,13 @@ namespace SevenZip
 			}
 
 		public:
-			// Extracts files using provided extractor
-			bool ExtractArchive(const CComPtr<Callback::Extractor>& extractor, FileIndexView files = {}) const;
+			// Extract files using provided extractor
+			bool Extract(const CComPtr<Callback::Extractor>& extractor) const;
+			bool Extract(const CComPtr<Callback::Extractor>& extractor, FileIndexView files) const;
 
 			// Extract entire archive or only specified files into a directory
-			bool ExtractArchive(const TString& directory, FileIndexView files = {}) const;
+			bool ExtractToDirectory(const TString& directory) const;
+			bool ExtractToDirectory(const TString& directory, FileIndexView files) const;
 	
 		public:
 			// Includes the last directory as the root in the archive, e.g. specifying "C:\Temp\MyFolder"

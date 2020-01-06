@@ -124,8 +124,13 @@ namespace SevenZip
 		return m_IsLoaded;
 	}
 
-	bool Archive::DoExtract(const CComPtr<Callback::Extractor>& extractor, FileIndexView files) const
+	bool Archive::DoExtract(const CComPtr<Callback::Extractor>& extractor, const FileIndexView* files) const
 	{
+		if (files && files->empty())
+		{
+			return false;
+		}
+
 		if (auto fileStream = FileSystem::OpenFileToRead(m_ArchivePath))
 		{
 			auto archive = Utility::GetArchiveReader(*m_Library, m_Property_CompressionFormat);
@@ -141,22 +146,37 @@ namespace SevenZip
 				extractor->SetArchive(archive);
 				extractor->SetNotifier(m_Notifier);
 
-				HRESULT result = E_FAIL;
-				if (!files.empty())
+				HRESULT result = E_INVALIDARG;
+				if (files)
 				{
+					auto IsInvalidIndex = [this](FileIndex index)
+					{
+						return index == InvalidFileIndex || index >= m_Items.size();
+					};
+
 					// Process only specified files
-					if (files.size() == 1)
+					if (files->size() == 1)
 					{
 						// No need to sort single index
-						result = archive->Extract(files.data(), static_cast<UInt32>(files.size()), false, extractor);
+						if (IsInvalidIndex(*files->data()))
+						{
+							return false;
+						}
+						result = archive->Extract(files->data(), static_cast<UInt32>(files->size()), false, extractor);
 					}
 					else
 					{
 						// IInArchive::Extract requires sorted array
-						FileIndexVector temp = files.CopyToVector();
+						FileIndexVector temp = files->CopyToVector();
 						std::sort(temp.begin(), temp.end());
 
-						result = archive->Extract(temp.data(), static_cast<UInt32>(temp.size()), false, extractor);
+						// Remove invalid items
+						temp.erase(std::remove_if(temp.begin(), temp.end(), IsInvalidIndex), temp.end());
+
+						if (!temp.empty())
+						{
+							result = archive->Extract(temp.data(), static_cast<UInt32>(temp.size()), false, extractor);
+						}
 					}
 				}
 				else
@@ -211,14 +231,24 @@ namespace SevenZip
 	}
 	
 	// Extraction
-	bool Archive::ExtractArchive(const CComPtr<Callback::Extractor>& extractor, FileIndexView files) const
+	bool Archive::Extract(const CComPtr<Callback::Extractor>& extractor) const
 	{
-		return DoExtract(extractor, files);
+		return DoExtract(extractor, nullptr);
 	}
-	bool Archive::ExtractArchive(const TString& directory, FileIndexView files) const
+	bool Archive::Extract(const CComPtr<Callback::Extractor>& extractor, FileIndexView files) const
+	{
+		return DoExtract(extractor, &files);
+	}
+
+	bool Archive::ExtractToDirectory(const TString& directory) const
 	{
 		auto extractor = CreateObject<Callback::FileExtractor>(directory, m_Notifier);
-		return DoExtract(extractor.Detach(), files);
+		return DoExtract(extractor.Detach(), nullptr);
+	}
+	bool Archive::ExtractToDirectory(const TString& directory, FileIndexView files) const
+	{
+		auto extractor = CreateObject<Callback::FileExtractor>(directory, m_Notifier);
+		return DoExtract(extractor.Detach(), &files);
 	}
 
 	// Compression
