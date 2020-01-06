@@ -47,7 +47,7 @@ namespace SevenZip
 				m_Notifier = notifier;
 			}
 
-			bool ShouldCancel()
+			bool ShouldCancel() const
 			{
 				if (m_Notifier)
 				{
