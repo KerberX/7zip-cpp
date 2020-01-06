@@ -7,6 +7,8 @@ namespace SevenZip
 	using FileIndex = uint32_t;
 	using FileIndexVector = std::vector<FileIndex>;
 
+	constexpr FileIndex InvalidFileIndex = std::numeric_limits<FileIndex>::max();
+
 	enum class CompressionMethod
 	{
 		Unknown = -1,
