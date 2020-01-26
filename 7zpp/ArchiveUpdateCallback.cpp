@@ -116,11 +116,13 @@ namespace SevenZip::Callback
 			}
 			case kpidSize:
 			{
-				prop = fileInfo.Size;
+				// Apparently 7-Zip requires file size to be of 'uint64_t' type
+				prop = static_cast<uint64_t>(fileInfo.Size);
 				break;
 			}
 			case kpidAttrib:
 			{
+				// 'uint32_t' seems to be correct type here
 				prop = fileInfo.Attributes;
 				break;
 			}

@@ -12,26 +12,29 @@ namespace SevenZip
 		private:
 			HRESULT InternalClear();
 			void InternalCopy(const PROPVARIANT& source);
+			void InternalSetType(VARENUM type);
+
 			void AssignString(std::string_view value);
 			void AssignString(std::wstring_view value);
 
 			template<VARENUM type, class TValue1, class TValue2>
 			void CreateValue(TValue1& valueStore, TValue2 value)
 			{
-				this->vt = type;
-				this->wReserved1 = 0;
 				valueStore = std::move(value);
+				wReserved1 = 0;
+				InternalSetType(type);
 			}
 
 			template<VARENUM type, class TValue1, class TValue2>
 			VariantProperty& AssignValue(TValue1& valueStore, TValue2 value)
 			{
-				if (this->vt != type)
+				if (vt != type)
 				{
 					InternalClear();
-					this->vt = type;
 				}
+
 				valueStore = std::move(value);
+				InternalSetType(type);
 
 				return *this;
 			}

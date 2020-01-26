@@ -61,6 +61,11 @@ namespace SevenZip
 			scode = hr;
 		}
 	}
+	void VariantProperty::InternalSetType(VARENUM type)
+	{
+		vt = type;
+	}
+	
 	void VariantProperty::AssignString(std::string_view value)
 	{
 		InternalClear();
