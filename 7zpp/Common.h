@@ -57,6 +57,19 @@ namespace SevenZip
 			size_t m_Size = 0;
 
 		private:
+			void AssignMultiple(const FileIndex* data, size_t count)
+			{
+				if (data && count != 0)
+				{
+					m_Data.Ptr = data;
+					m_Size = count;
+
+					if (count == 1)
+					{
+						AssignSingle(*data);
+					}
+				}
+			}
 			void AssignSingle(FileIndex fileIndex)
 			{
 				m_Data.Index = fileIndex;
@@ -71,20 +84,27 @@ namespace SevenZip
 			FileIndexView() = default;
 			FileIndexView(const FileIndex* data, size_t count)
 			{
-				if (data && count != 0)
-				{
-					m_Data.Ptr = data;
-					m_Size = count;
-
-					if (count == 1)
-					{
-						AssignSingle(*data);
-					}
-				}
+				AssignMultiple(data, count);
+			}
+			FileIndexView(const FileIndexVector& files)
+			{
+				AssignMultiple(files.data(), files.size());
 			}
 			FileIndexView(FileIndex fileIndex)
 			{
 				AssignSingle(fileIndex);
+			}
+
+			template<class T, size_t N>
+			FileIndexView(const T(&container)[N])
+			{
+				AssignMultiple(container, N);
+			}
+
+			template<class T, size_t N>
+			FileIndexView(const std::array<T, N>& container)
+			{
+				AssignMultiple(container.data(), container.size());
 			}
 
 		public:
@@ -103,6 +123,19 @@ namespace SevenZip
 			bool empty() const
 			{
 				return m_Size == 0;
+			}
+
+			FileIndex operator[](size_t index) const
+			{
+				return data()[index];
+			}
+			FileIndex front() const
+			{
+				return *data();
+			}
+			FileIndex back() const
+			{
+				return data()[size() - 1];
 			}
 
 			FileIndexVector CopyToVector() const

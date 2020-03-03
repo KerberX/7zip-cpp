@@ -146,7 +146,7 @@ namespace SevenZip
 				extractor->SetArchive(archive);
 				extractor->SetNotifier(m_Notifier);
 
-				HRESULT result = E_INVALIDARG;
+				HRESULT result = E_FAIL;
 				if (files)
 				{
 					auto IsInvalidIndex = [this](FileIndex index)
@@ -158,8 +158,9 @@ namespace SevenZip
 					if (files->size() == 1)
 					{
 						// No need to sort single index
-						if (IsInvalidIndex(*files->data()))
+						if (IsInvalidIndex(files->front()))
 						{
+							result = E_INVALIDARG;
 							return false;
 						}
 						result = archive->Extract(files->data(), static_cast<UInt32>(files->size()), false, extractor);
@@ -173,6 +174,7 @@ namespace SevenZip
 						// Remove invalid items
 						temp.erase(std::remove_if(temp.begin(), temp.end(), IsInvalidIndex), temp.end());
 
+						result = E_INVALIDARG;
 						if (!temp.empty())
 						{
 							result = archive->Extract(temp.data(), static_cast<UInt32>(temp.size()), false, extractor);
