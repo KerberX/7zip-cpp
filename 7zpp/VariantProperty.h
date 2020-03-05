@@ -116,6 +116,15 @@ namespace SevenZip
 			}
 
 		public:
+			VARTYPE GetType() const
+			{
+				return this->vt;
+			}
+			bool IsEmpty() const
+			{
+				return GetType() == VT_EMPTY;
+			}
+
 			HRESULT Clear();
 			HRESULT Copy(const PROPVARIANT& source);
 			HRESULT Attach(PROPVARIANT& source);
@@ -265,6 +274,15 @@ namespace SevenZip
 			bool operator!=(const VariantProperty& other) const
 			{
 				return Compare(other) != 0;
+			}
+
+			explicit operator bool() const
+			{
+				return !IsEmpty();
+			}
+			bool operator!() const
+			{
+				return IsEmpty();
 			}
 	};
 }
