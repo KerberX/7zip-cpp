@@ -22,6 +22,8 @@ namespace SevenZip::Utility
 	CComPtr<IOutArchive> GetArchiveWriter(const Library& library, CompressionFormat format);
 
 	CompressionFormat GetCompressionFormat(const Library& library, const TString& archivePath, ProgressNotifier* notifier = nullptr);
+	
+	std::optional<size_t> GetNumberOfItems(const CComPtr<IInArchive>& archive);
 	bool GetNumberOfItems(const Library& library, const TString& archivePath, CompressionFormat format, size_t& itemCount, ProgressNotifier* notifier = nullptr);
 	
 	std::optional<FileInfo> GetArchiveItem(const CComPtr<IInArchive>& archive, FileIndex fileIndex);

@@ -172,6 +172,25 @@ namespace SevenZip::Utility
 		// If we get here, the format is unknown
 		return CompressionFormat::Unknown;
 	}
+
+	std::optional<size_t> GetNumberOfItems(const CComPtr<IInArchive>& archive)
+	{
+		UInt32 itemCount = 0;
+		if (archive->GetNumberOfItems(&itemCount) == S_OK)
+		{
+			// If there are items try to verify if they're readable
+			if (itemCount != 0)
+			{
+				VariantProperty property;
+				if (FAILED(archive->GetProperty(0, kpidSize, &property)) || property.IsEmpty())
+				{
+					return std::nullopt;
+				}
+			}
+			return itemCount;
+		}
+		return std::nullopt;
+	}
 	bool GetNumberOfItems(const Library& library, const TString& archivePath, CompressionFormat format, size_t& itemCount, ProgressNotifier* notifier)
 	{
 		if (auto fileStream = FileSystem::OpenFileToRead(archivePath))
@@ -185,29 +204,26 @@ namespace SevenZip::Utility
 				CallAtExit atExit([&]()
 				{
 					archive->Close();
+					if (notifier)
+					{
+						notifier->OnEnd();
+					}
 				});
 
 				if (notifier)
 				{
 					notifier->OnStart(_T("Getting number of items"), 0);
 				}
-
-				UInt32 itemCount32 = 0;
-				if (archive->GetNumberOfItems(&itemCount32) != S_OK)
+				if (auto count = GetNumberOfItems(archive))
 				{
-					if (notifier)
-					{
-						notifier->OnEnd();
-					}
-
-					itemCount = itemCount32;
+					itemCount = *count;
 					return true;
 				}
 			}
 		}
 		return false;
 	}
-	
+
 	std::optional<FileInfo> GetArchiveItem(const CComPtr<IInArchive>& archive, FileIndex fileIndex)
 	{
 		FileInfo fileItem;

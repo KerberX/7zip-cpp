@@ -20,6 +20,8 @@ namespace
 {
 	constexpr auto AllFilesPattern = _T("*");
 
+	using ArchiveProperty = decltype(kpidNoProperty);
+
 	const char* GetMethodString(SevenZip::CompressionMethod method)
 	{
 		using namespace SevenZip;
@@ -95,6 +97,19 @@ namespace
 
 		return SUCCEEDED(propertiesSet->SetProperties(names, values, ARRAYSIZE(values)));
 	}
+
+	template<class T>
+	std::optional<T> GetIntProperty(IInArchive& archive, size_t fileIndex, ArchiveProperty type)
+	{
+		using namespace SevenZip;
+
+		VariantProperty property;
+		if (SUCCEEDED(archive.GetProperty(static_cast<FileIndex>(fileIndex), type, &property)))
+		{
+			return property.ToInteger<T>();
+		}
+		return std::nullopt;
+	}
 }
 
 namespace SevenZip
@@ -110,18 +125,55 @@ namespace SevenZip
 
 		return m_Property_CompressionFormat != CompressionFormat::Unknown;
 	}
-	bool Archive::InitItems()
-	{
-		return Utility::GetArchiveItems(*m_Library, m_ArchivePath, m_Property_CompressionFormat, m_Items, m_Notifier);
-	}
 	bool Archive::InitMetadata()
 	{
 		if (!m_IsLoaded)
 		{
-			const bool detectedFormat = !m_OverrideCompressionFormat ? InitCompressionFormat() : true;
-			m_IsLoaded = detectedFormat && InitItems();
+			return !m_OverrideCompressionFormat ? InitCompressionFormat() : true;
 		}
 		return m_IsLoaded;
+	}
+	bool Archive::InitArchiveStreams()
+	{
+		m_ArchiveStream = nullptr;
+		m_ArchiveStreamWrapper = nullptr;
+		m_ArchiveStreamReader = nullptr;
+		m_ItemCount = 0;
+
+		m_ArchiveStream = FileSystem::OpenFileToRead(m_ArchivePath);
+		if (m_ArchiveStream)
+		{
+			m_ArchiveStreamWrapper = CreateObject<InStreamWrapper>(m_ArchiveStream, m_Notifier);
+			m_ArchiveStreamReader = Utility::GetArchiveReader(*m_Library, m_Property_CompressionFormat);
+
+			if (m_ArchiveStreamReader)
+			{
+				auto openCallback = CreateObject<Callback::OpenArchive>(m_ArchivePath, m_Notifier);
+				if (SUCCEEDED(m_ArchiveStreamReader->Open(m_ArchiveStreamWrapper, nullptr, openCallback)))
+				{
+					m_ItemCount = Utility::GetNumberOfItems(m_ArchiveStreamReader).value_or(0);
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+	void Archive::RewindArchiveStreams()
+	{
+		auto SeekStream = [](IStream& stream, int64_t position)
+		{
+			LARGE_INTEGER value = {};
+			value.QuadPart = position;
+
+			return stream.Seek(value, STREAM_SEEK_SET, nullptr);
+		};
+		auto SeekStreamWrapper = [](IInStream& stream, int64_t position)
+		{
+			return stream.Seek(position, STREAM_SEEK_SET, nullptr);
+		};
+
+		SeekStream(*m_ArchiveStream, 0);
+		SeekStreamWrapper(*m_ArchiveStreamWrapper, 0);
 	}
 
 	bool Archive::DoExtract(const CComPtr<Callback::Extractor>& extractor, const FileIndexView* files) const
@@ -151,7 +203,7 @@ namespace SevenZip
 				{
 					auto IsInvalidIndex = [this](FileIndex index)
 					{
-						return index == InvalidFileIndex || index >= m_Items.size();
+						return index == InvalidFileIndex || index >= m_ItemCount;
 					};
 
 					// Process only specified files
@@ -199,7 +251,7 @@ namespace SevenZip
 
 		auto outFile = CreateObject<OutStreamWrapper_IStream>(FileSystem::OpenFileToWrite(m_ArchivePath));
 		auto updateCallback = CreateObject<Callback::UpdateArchiveBase>(pathPrefix, filePaths, inArchiveFilePaths, m_ArchivePath, m_Notifier);
-		updateCallback->SetExistingItemsCount(m_Items.size());
+		updateCallback->SetExistingItemsCount(m_ItemCount);
 
 		return SUCCEEDED(archiveWriter->UpdateItems(outFile, static_cast<UInt32>(filePaths.size()), updateCallback));
 	}
@@ -227,11 +279,38 @@ namespace SevenZip
 
 		// Load new archive
 		m_ArchivePath = filePath;
-		m_IsLoaded = InitMetadata();
+		m_IsLoaded = InitMetadata() && InitArchiveStreams();
 
 		return m_IsLoaded;
 	}
-	
+	std::optional<FileInfo> Archive::GetItem(size_t index) const
+	{
+		if (index < m_ItemCount)
+		{
+			return Utility::GetArchiveItem(m_ArchiveStreamReader, static_cast<FileIndex>(index));
+		}
+		return std::nullopt;
+	}
+
+	int64_t Archive::GetOriginalSize() const
+	{
+		int64_t total = 0;
+		for (size_t i = 0; i < m_ItemCount; i++)
+		{
+			total += GetIntProperty<int64_t>(*m_ArchiveStreamReader, i, ArchiveProperty::kpidSize).value_or(0);
+		}
+		return total;
+	}
+	int64_t Archive::GetCompressedSize() const
+	{
+		int64_t total = 0;
+		for (size_t i = 0; i < m_ItemCount; i++)
+		{
+			total += GetIntProperty<int64_t>(*m_ArchiveStreamReader, i, ArchiveProperty::kpidPackSize).value_or(0);
+		}
+		return total;
+	}
+
 	// Extraction
 	bool Archive::Extract(const CComPtr<Callback::Extractor>& extractor) const
 	{
@@ -300,12 +379,15 @@ namespace SevenZip
 	{
 		Archive nullObject(*m_Library);
 
-		ExchangeAndReset(m_Library, other.m_Library, nullptr);
+		ExchangeAndReset(m_Library, other.m_Library, nullObject.m_Library);
 		ExchangeAndReset(m_Notifier, other.m_Notifier, nullObject.m_Notifier);
 		m_ArchivePath = std::move(other.m_ArchivePath);
+		m_ArchiveStream = std::move(other.m_ArchiveStream);
+		m_ArchiveStreamReader = std::move(other.m_ArchiveStreamReader);
+		m_ArchiveStreamWrapper = std::move(other.m_ArchiveStreamWrapper);
 
 		// Metadata
-		m_Items = std::move(nullObject.m_Items);
+		ExchangeAndReset(m_ItemCount, other.m_ItemCount, nullObject.m_ItemCount);
 		ExchangeAndReset(m_IsLoaded, other.m_IsLoaded, nullObject.m_IsLoaded);
 		ExchangeAndReset(m_OverrideCompressionFormat, other.m_OverrideCompressionFormat, nullObject.m_OverrideCompressionFormat);
 

@@ -1,11 +1,14 @@
 #pragma once
 #include "Common.h"
 #include "FileInfo.h"
+struct IStream;
+struct IInArchive;
 
 namespace SevenZip
 {
 	class Library;
 	class ProgressNotifier;
+	class InStreamWrapper;
 
 	namespace Callback
 	{
@@ -19,11 +22,15 @@ namespace SevenZip
 	{
 		protected:
 			const Library* m_Library = nullptr;
-			ProgressNotifier* m_Notifier = nullptr;
+
 			TString m_ArchivePath;
+			CComPtr<IStream> m_ArchiveStream;
+			CComPtr<IInArchive> m_ArchiveStreamReader;
+			CComPtr<InStreamWrapper> m_ArchiveStreamWrapper;
+			ProgressNotifier* m_Notifier = nullptr;
 
 			// Metadata
-			FileInfo::Vector m_Items;
+			size_t m_ItemCount = 0;
 			bool m_IsLoaded = false;
 			bool m_OverrideCompressionFormat = false;
 
@@ -38,8 +45,9 @@ namespace SevenZip
 		private:
 			void InvalidateCache();
 			bool InitCompressionFormat();
-			bool InitItems();
 			bool InitMetadata();
+			bool InitArchiveStreams();
+			void RewindArchiveStreams();
 
 		protected:
 			bool DoExtract(const CComPtr<Callback::Extractor>& extractor, const FileIndexView* files) const;
@@ -76,12 +84,12 @@ namespace SevenZip
 
 			size_t GetItemCount() const
 			{
-				return m_Items.size();
+				return m_ItemCount;
 			}
-			const FileInfo::Vector& GetItems() const
-			{
-				return m_Items;
-			}
+			std::optional<FileInfo> GetItem(size_t index) const;
+
+			int64_t GetOriginalSize() const;
+			int64_t GetCompressedSize() const;
 
 		public:
 			TString GetProperty_FilePath() const
