@@ -1,3 +1,5 @@
+# All changes made in this fork were moved to [KxFramework](https://github.com/KerberX/KxFramework) as part of its [Compression](https://github.com/KerberX/KxFramework/tree/master/kxf/Compression/SevenZip) module. This repository is now archived.
+
 # 7zip-cpp
 Fork of SevenZip++ for VS2017 (https://github.com/getnamo/7zip-cpp)
 
